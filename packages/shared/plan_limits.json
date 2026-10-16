@@ -1,0 +1,73 @@
+{
+  "_comment": "Single source of truth for plan limits. -1 means unlimited. Consumed by the Python backend (dbcore/plans.py) and the Qwik frontend (apps/web). Counts (projects, api_keys) are hard limits: creating past them returns 402 limit_reached. events_per_month (page views + custom events) is a SOFT-DROP limit: the collect API keeps answering 202 past it so tracked sites never see errors, but hits over the budget are counted and not stored; the dashboard shows the overage and a PostHog event fires once per period. retention_days bounds how long raw events are kept (older rows are pruned by `python -m dbcore.cli prune-events`).",
+  "plans": {
+    "free": {
+      "label": "Free",
+      "price_monthly": 0,
+      "price_annual": 0,
+      "projects": 3,
+      "api_keys": 5,
+      "events_per_month": 10000,
+      "retention_days": 90,
+      "audit_retention_days": 7,
+      "max_users": 1,
+      "api": "basic"
+    },
+    "pro": {
+      "label": "Pro / Supporter",
+      "price_monthly": 12,
+      "price_annual": 115,
+      "projects": 20,
+      "api_keys": 20,
+      "events_per_month": 500000,
+      "retention_days": 365,
+      "audit_retention_days": 365,
+      "max_users": 2,
+      "api": "full"
+    },
+    "team": {
+      "label": "Team",
+      "price_monthly": 49,
+      "price_annual": 470,
+      "projects": 100,
+      "api_keys": 100,
+      "events_per_month": 5000000,
+      "retention_days": 730,
+      "audit_retention_days": 730,
+      "max_users": 20,
+      "api": "full"
+    },
+    "enterprise": {
+      "label": "Enterprise",
+      "price_monthly": -1,
+      "price_annual": -1,
+      "projects": -1,
+      "api_keys": -1,
+      "events_per_month": -1,
+      "retention_days": -1,
+      "audit_retention_days": -1,
+      "max_users": -1,
+      "api": "full"
+    },
+    "selfhost": {
+      "label": "Self-host",
+      "price_monthly": 0,
+      "price_annual": 0,
+      "projects": -1,
+      "api_keys": -1,
+      "events_per_month": -1,
+      "retention_days": -1,
+      "audit_retention_days": -1,
+      "max_users": -1,
+      "api": "full"
+    }
+  },
+  "entitlement_to_plan": {
+    "team": "team",
+    "pro": "pro"
+  },
+  "entitlement_priority": [
+    "team",
+    "pro"
+  ]
+}

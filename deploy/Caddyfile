@@ -1,0 +1,29 @@
+# oops reverse proxy (local development). Single host on :8084; the
+# production routing lives in the 3m4 edge Caddy (see PRODUCTION.md), with the
+# same rules.
+
+:8084 {
+	# --- API (includes the public collect endpoints + pixel) ---
+	handle /api/* {
+		reverse_proxy api:5000
+	}
+
+	# --- MCP (Streamable HTTP) for AI agents ---
+	handle /mcp* {
+		reverse_proxy mcp:3333
+	}
+
+	# --- Tracker script: a static file served by the web service, embedded by
+	# third-party sites, so it must be cacheable and CORS-open.
+	@tracker path /m.js /m/*
+	handle @tracker {
+		header Cache-Control "public, max-age=3600"
+		header Access-Control-Allow-Origin "*"
+		reverse_proxy web:3000
+	}
+
+	# --- Marketing + dashboard (Qwik SSR) --- everything else.
+	handle {
+		reverse_proxy web:3000
+	}
+}

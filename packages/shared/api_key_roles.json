@@ -1,0 +1,30 @@
+{
+  "_comment": "Single source of truth for API-key roles and the scopes they grant. Consumed by the Python API (dbcore/rbac.py enforces scopes per endpoint), the Qwik dashboard (role picker on /dashboard/settings) and the MCP server (filters which tools a key can see and call). Keep roles additive: each role is a superset of the previous one. Project public keys (oops_pub_*) are NOT API keys: they can only call the collect endpoints and carry no role.",
+  "default_role": "editor",
+  "scopes": {
+    "projects:read": "List and read projects and their settings (including the public key).",
+    "projects:write": "Create and update projects, rotate the public key, change tracking settings.",
+    "projects:delete": "Delete projects (destructive).",
+    "stats:read": "Read aggregated stats, breakdowns, live visitors and raw events.",
+    "events:delete": "Purge a project's stored events (destructive).",
+    "usage:read": "Monthly usage counters and plan limits.",
+    "audit:read": "Read the account audit log."
+  },
+  "roles": {
+    "viewer": {
+      "label": "Viewer",
+      "description": "Read-only: projects, stats, events, usage.",
+      "scopes": ["projects:read", "stats:read", "usage:read"]
+    },
+    "editor": {
+      "label": "Editor",
+      "description": "Viewer, plus create and update projects and rotate public keys.",
+      "scopes": ["projects:read", "projects:write", "stats:read", "usage:read"]
+    },
+    "admin": {
+      "label": "Admin",
+      "description": "Editor, plus delete projects, purge events and read the audit log.",
+      "scopes": ["projects:read", "projects:write", "projects:delete", "stats:read", "events:delete", "usage:read", "audit:read"]
+    }
+  }
+}

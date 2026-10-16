@@ -1,0 +1,105 @@
+name: oops
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oops
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oops}
+      POSTGRES_DB: oops
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oops"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Creates/upgrades the schema, then exits. Other services wait for it.
+  migrate:
+    build: { context: .., dockerfile: services/api/Dockerfile }
+    command: ["python", "-m", "dbcore.cli", "upgrade"]
+    env_file: ../.env
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: { context: .., dockerfile: services/api/Dockerfile }
+    env_file: ../.env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    expose: ["5000"]
+    volumes:
+      # Optional MaxMind GeoLite2-City.mmdb for country / region / city.
+      # Missing file = hits are stored without location (see .env GEOIP_DB_PATH).
+      - ./geoip:/geoip:ro
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      # VITE_* are inlined at build time. Interpolated from the repo-root .env
+      # (run compose from the repo root). Override per environment as needed.
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_APP_URL: ${VITE_APP_URL:-}
+        VITE_POSTHOG_KEY: ${VITE_POSTHOG_KEY:-}
+        VITE_POSTHOG_HOST: ${VITE_POSTHOG_HOST:-https://us.i.posthog.com}
+        VITE_REVENUECAT_PUBLIC_KEY: ${VITE_REVENUECAT_PUBLIC_KEY:-}
+        VITE_BILLING_ENABLED: ${VITE_BILLING_ENABLED:-true}
+        VITE_INFO_URL: ${VITE_INFO_URL:-https://info.3m4.net}
+        VITE_METRICS_PROJECT_KEY: ${VITE_METRICS_PROJECT_KEY:-}
+        VITE_METRICS_TRACKER_URL: ${VITE_METRICS_TRACKER_URL:-https://metrics.3m4.net/m.js}
+    env_file: ../.env
+    environment:
+      # SSR resolves oops' feature switches straight from the API over the internal network.
+      API_INTERNAL_URL: http://api:5000/api
+    expose: ["3000"]
+    restart: unless-stopped
+
+  # Remote MCP server (Streamable HTTP) for AI agents. Auth = oops API key as a
+  # Bearer token; it only talks to the API service over the internal network.
+  mcp:
+    build: { context: .., dockerfile: packages/mcp-server/Dockerfile }
+    environment:
+      OOPS_API_URL: http://api:5000/api
+      OOPS_MCP_PORT: "3333"
+      OOPS_AUDIT_LOG: stderr
+    depends_on:
+      api: { condition: service_started }
+    expose: ["3333"]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "8084:8084"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on: [api, web, mcp]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  caddydata:
+  caddyconfig:
