@@ -1,10 +1,10 @@
 """Monthly usage metering.
 
 One metered metric per account per calendar month: ``events``, the number of
-hits received by the collect API (page views + custom events). The plan limit
-``events_per_month`` is a SOFT-DROP limit: the collect endpoints keep answering
-202 past it so a tracked site never sees an error, but hits over the budget
-are counted and NOT stored. The overage shows up in the dashboard and a single
+error events received by the ingest API. The plan limit ``events_per_month``
+is a SOFT-DROP limit: the ingest endpoints keep answering 202 past it so a
+failing app never gets a second error back, but events over the budget are
+counted and NOT stored. The overage shows up in the dashboard and a single
 PostHog ``limit_reached {which: "events"}`` event fires per period
 (``events_limit_notified`` makes it one-shot).
 
@@ -60,14 +60,14 @@ def get_or_create_counter(session: Session, account_id, on: date | None = None) 
 
 
 def meter_event(session: Session, account_id, limit: int) -> tuple[bool, bool]:
-    """Count one hit. Returns ``(store, notify)``:
+    """Count one event. Returns ``(store, notify)``:
 
-    * ``store`` — False when the hit is over the plan budget and must be dropped;
+    * ``store`` — False when the event is over the plan budget and must be dropped;
     * ``notify`` — True exactly once per period, the first time the counter
       reaches ``limit`` (the caller fires the PostHog event).
     """
     counter = get_or_create_counter(session, account_id)
-    # Atomic SQL increment: collect traffic is concurrent by nature and a
+    # Atomic SQL increment: ingest traffic is concurrent by nature and a
     # read-modify-write in Python would lose counts across workers.
     total = session.scalar(
         update(UsageCounter)

@@ -6,15 +6,13 @@ another's projects (a foreign project is a 404, never a 403), and each
 endpoint declares the RBAC scope it needs. Mutations are written to the audit
 log in the same transaction as the change.
 
-Creating a project mints its public key (``oops_pub_…``, what the tracker
-and the pixel send hits with). The helpers (``get_owned_project``,
-``project_counts``, ``limit_reached``) are shared with the stats blueprint.
+Creating a project mints its public key (``oops_pub_…``, what the SDK and
+server-side reporters post events with). The helpers (``get_owned_project``,
+``public_limit``, ``limit_reached``) are shared with the issues blueprint.
 """
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 
 from flask import Blueprint, g, jsonify, request
 from sqlalchemy import delete, func, or_, select
@@ -22,16 +20,16 @@ from sqlalchemy import delete, func, or_, select
 from dbcore import audit
 from dbcore.config import config
 from dbcore.db import session_scope
-from dbcore.models import Account, Event, Project
+from dbcore.models import Account, Event, Issue, IssueUser, Project
 from dbcore.plans import effective_plan_limits, within_limit
 from dbcore.posthog_client import capture
 from dbcore.slugs import is_valid_hostname, is_valid_project_key, slugify
-from dbcore.stats import live, valid_timezone, window_totals
+from dbcore.stats import project_counts, valid_timezone
 
 from ..auth_utils import PUBLIC_KEY_PREFIX, actor, generate_secret_key, hash_token, require_auth_or_api_key, require_scope
 from ..errors import ApiError
 from ..extensions import limiter, public_api_key_func
-from ..serializers import json_body, serialize_project
+from ..serializers import iso, json_body, serialize_project
 
 bp = Blueprint("projects", __name__)
 
@@ -39,7 +37,7 @@ bp = Blueprint("projects", __name__)
 public_limit = limiter.limit(config.rate_limit_public_api, key_func=public_api_key_func)
 
 _STRING_FIELDS = {"name": 120, "description": 20000, "url": 2048}
-_BOOL_FIELDS = ("collect_enabled", "exclude_bots", "store_ip")
+_BOOL_FIELDS = ("ingest_enabled", "store_ip")
 MAX_ALLOWED_ORIGINS = 20
 
 
@@ -58,40 +56,6 @@ def get_owned_project(session, project_id_str: str) -> Project:
     if project is None:
         raise ApiError(404, "not_found", "Project not found.")
     return project
-
-
-def project_counts(session, projects: list[Project]) -> dict:
-    """``{project_id: {pageviews_30d, visitors_30d, pageviews_today, last_event_at}}``."""
-    if not projects:
-        return {}
-    ids = [p.id for p in projects]
-    out = {pid: {"pageviews_30d": 0, "visitors_30d": 0, "pageviews_today": 0, "last_event_at": None} for pid in ids}
-    now = datetime.now(timezone.utc)
-    since = now - timedelta(days=30)
-    rows = session.execute(
-        select(
-            Event.project_id,
-            func.count(Event.id).filter(Event.kind == "pageview"),
-            func.count(func.distinct(Event.visitor_hash)),
-            func.max(Event.ts),
-        )
-        .where(Event.project_id.in_(ids), Event.ts >= since)
-        .group_by(Event.project_id)
-    ).all()
-    for pid, pv, vis, last in rows:
-        out[pid]["pageviews_30d"] = int(pv)
-        out[pid]["visitors_30d"] = int(vis)
-        out[pid]["last_event_at"] = last
-    # "Today" is local to each project's time zone.
-    for p in projects:
-        tz = p.timezone if valid_timezone(p.timezone) else "UTC"
-        today = datetime.now(ZoneInfo(tz)).date()
-        out[p.id]["pageviews_today"] = window_totals(session, p.id, tz, today, today)["pageviews"]
-        if out[p.id]["last_event_at"] is None:
-            out[p.id]["last_event_at"] = session.scalar(
-                select(func.max(Event.ts)).where(Event.project_id == p.id)
-            )
-    return out
 
 
 def limit_reached(account: Account, which: str, message: str) -> ApiError:
@@ -113,7 +77,7 @@ def _mint_public_key(project: Project) -> None:
 
 
 def _serialize_one(session, project: Project) -> dict:
-    return serialize_project(project, project_counts(session, [project]).get(project.id))
+    return serialize_project(project, project_counts(session, [project.id]).get(project.id))
 
 
 def _clean_origins(raw) -> list[str]:
@@ -160,9 +124,9 @@ def list_projects():
             like = f"%{q}%"
             stmt = stmt.where(or_(Project.name.ilike(like), Project.key.ilike(like), Project.url.ilike(like)))
         projects = session.scalars(stmt.order_by(Project.created_at.desc(), Project.id)).all()
-        counts = project_counts(session, list(projects))
+        counts = project_counts(session, [p.id for p in projects])
         items = [serialize_project(p, counts.get(p.id)) for p in projects]
-    return jsonify({"items": items, "total": len(items)})
+    return jsonify({"items": items})
 
 
 @bp.post("")
@@ -205,6 +169,7 @@ def create_project():
             url=url,
             timezone=tz,
             allowed_origins=origins,
+            ingest_enabled=bool(data.get("ingest_enabled", True)),
             store_ip=bool(data.get("store_ip", False)),
         )
         _mint_public_key(project)
@@ -305,7 +270,7 @@ def delete_project(project_id):
             meta={"key": project.key, "name": project.name},
             **actor(),
         )
-        # ON DELETE CASCADE takes the events with it.
+        # ON DELETE CASCADE takes the issues and events with it.
         session.delete(project)
     return "", 204
 
@@ -316,7 +281,7 @@ def delete_project(project_id):
 @require_scope("projects:write")
 def rotate_key(project_id):
     """Replace the public key. The old key stops working immediately: every
-    snippet out there must be updated."""
+    snippet out there must be updated. Returns the project."""
     with session_scope() as session:
         project = get_owned_project(session, project_id)
         old_prefix = project.public_key_prefix
@@ -331,7 +296,8 @@ def rotate_key(project_id):
             **actor(),
         )
         session.flush()
-        body = {"public_key": project.public_key, "public_key_prefix": project.public_key_prefix}
+        session.refresh(project)
+        body = _serialize_one(session, project)
     return jsonify(body)
 
 
@@ -341,34 +307,21 @@ def rotate_key(project_id):
 @bp.get("/<project_id>/summary")
 @public_limit
 @require_auth_or_api_key
-@require_scope("stats:read")
+@require_scope("projects:read")
 def summary(project_id):
-    """Headline numbers for the project cards and the MCP ``project_summary`` tool."""
+    """``{open_issues, events_24h, events_30d, users_30d, last_event_at}`` for
+    the project cards and the MCP ``get_project`` tool."""
     with session_scope() as session:
         project = get_owned_project(session, project_id)
-        tz = project.timezone if valid_timezone(project.timezone) else "UTC"
-        today = datetime.now(ZoneInfo(tz)).date()
-        yesterday = today - timedelta(days=1)
+        counts = project_counts(session, [project.id])[project.id]
         body = {
             "project_id": str(project.id),
-            "timezone": tz,
-            "today": window_totals(session, project.id, tz, today, today),
-            "yesterday": window_totals(session, project.id, tz, yesterday, yesterday),
-            "last_7_days": window_totals(session, project.id, tz, today - timedelta(days=6), today),
-            "last_30_days": window_totals(session, project.id, tz, today - timedelta(days=29), today),
-            "live_visitors": live(session, project.id, config.live_window_min)["visitors"],
-            "last_event_at": None,
-            "all_time_pageviews": int(
-                session.scalar(
-                    select(func.count(Event.id)).where(Event.project_id == project.id, Event.kind == "pageview")
-                )
-                or 0
-            ),
+            "open_issues": counts["open_issues"],
+            "events_24h": counts["events_24h"],
+            "events_30d": counts["events_30d"],
+            "users_30d": counts["users_30d"],
+            "last_event_at": iso(counts["last_event_at"]),
         }
-        last = session.scalar(select(func.max(Event.ts)).where(Event.project_id == project.id))
-        from ..serializers import iso
-
-        body["last_event_at"] = iso(last)
     return jsonify(body)
 
 
@@ -377,28 +330,21 @@ def summary(project_id):
 @require_auth_or_api_key
 @require_scope("events:delete")
 def purge_events(project_id):
-    """Delete stored events. ``?before=YYYY-MM-DD`` keeps newer ones; without
-    it, everything goes. The project and its key survive."""
-    raw = (request.args.get("before") or "").strip()
-    before = None
-    if raw:
-        try:
-            before = datetime.combine(date.fromisoformat(raw), datetime.min.time(), tzinfo=timezone.utc)
-        except ValueError:
-            raise ApiError(400, "invalid_range", "before must be a YYYY-MM-DD date.")
+    """Delete every event and issue of the project (and the per-issue user
+    sets). The project and its key survive."""
     with session_scope() as session:
         project = get_owned_project(session, project_id)
-        stmt = delete(Event).where(Event.project_id == project.id)
-        if before is not None:
-            stmt = stmt.where(Event.ts < before)
-        deleted = session.execute(stmt).rowcount or 0
+        issue_ids = select(Issue.id).where(Issue.project_id == project.id)
+        deleted_events = session.execute(delete(Event).where(Event.project_id == project.id)).rowcount or 0
+        session.execute(delete(IssueUser).where(IssueUser.issue_id.in_(issue_ids)))
+        deleted_issues = session.execute(delete(Issue).where(Issue.project_id == project.id)).rowcount or 0
         audit.record(
             session,
             account_id=g.account_id,
             action="events.purge",
             target_type="project",
             target_id=str(project.id),
-            meta={"key": project.key, "before": raw or None, "deleted": int(deleted)},
+            meta={"key": project.key, "deleted_events": int(deleted_events), "deleted_issues": int(deleted_issues)},
             **actor(),
         )
-    return jsonify({"deleted": int(deleted), "before": raw or None})
+    return jsonify({"deleted_events": int(deleted_events), "deleted_issues": int(deleted_issues)})

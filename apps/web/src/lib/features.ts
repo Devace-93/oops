@@ -1,6 +1,6 @@
 /**
  * oops' OWN feature switches ("features"), mirrored from the backend (the
- * source of truth). Not to be confused with the events a project collects.
+ * source of truth). Not to be confused with the error events a project receives.
  *
  * Registry + fail-safe defaults live in `packages/shared/feature_flags.json`
  * (same pattern as plan_limits.json). Authenticated pages get resolved
@@ -10,7 +10,7 @@
 import { createContextId } from "@builder.io/qwik";
 import registry from "../../../../packages/shared/feature_flags.json";
 
-export type FeatureKey = "site-building" | "signups" | "early-access" | "public-api" | "collect-api" | "geo" | "billing";
+export type FeatureKey = "site-building" | "signups" | "early-access" | "public-api" | "ingest-api" | "billing";
 
 export type Features = Record<FeatureKey, boolean>;
 

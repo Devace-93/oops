@@ -1,23 +1,23 @@
 """SQLAlchemy models — the canonical data model for oops.
 
 Tenancy: an Account is the billing entity. Users join accounts via Memberships.
-Product hierarchy: Account -> Project -> Event. Deleting a project cascades
-its events (Postgres ``ON DELETE CASCADE``), so the API never has to clean up
-by hand.
+Product hierarchy: Account -> Project -> Issue -> Event. Deleting a project
+cascades its issues and events (Postgres ``ON DELETE CASCADE``), so the API
+never has to clean up by hand.
 
 Secrets (API keys, refresh tokens) are stored as sha256 hashes plus a short
 non-sensitive prefix; the plaintext is shown once. A project's *public key*
-(``oops_pub_…``) is not a secret — it ships inside the tracker snippet — so
-it is stored in plaintext as well (``Project.public_key``) and the owner can
-read it back at any time; the hash column is what collect requests are
-matched on.
+(``oops_pub_…``) is not a secret — it ships inside the SDK snippet — so it is
+stored in plaintext as well (``Project.public_key``) and the owner can read it
+back at any time; the hash column is what ingest requests are matched on.
 
-Events are stored raw (one row per page view or custom event) and aggregated
-on the fly with indexed ``GROUP BY`` queries. That keeps the write path a
-single INSERT and the schema trivial to self-host; roll-ups can come later if
-a project outgrows it. Raw user agents are never stored, and raw IPs only
-when a project opts in (``store_ip``): by default only the derived device /
-browser / OS / geo fields and daily-salted hashes are kept.
+Events are stored raw (one row per error occurrence). Issues are the grouping
+by ``fingerprint`` with denormalised counters (``event_count``,
+``user_count``, ``first_seen`` / ``last_seen``) maintained on ingest inside the
+same transaction as the event insert; ``issue_users`` backs ``user_count`` so
+it stays exact without a ``COUNT(DISTINCT)`` per event. Raw user agents are
+never stored, and raw IPs only when a project opts in (``store_ip``): by
+default only the derived browser / OS / device fields and hashes are kept.
 """
 from __future__ import annotations
 
@@ -42,6 +42,10 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
+
+ISSUE_STATUSES = ("open", "resolved", "ignored")
+LEVELS = ("fatal", "error", "warning", "info")
+SOURCES = ("sdk", "api")
 
 
 def _uuid() -> uuid.UUID:
@@ -128,11 +132,11 @@ class Subscription(Base):
 
 
 # --------------------------------------------------------------------------- #
-# Product: projects and events
+# Product: projects, issues and events
 # --------------------------------------------------------------------------- #
 class Project(Base):
-    """One project per tracked site or app. Owns the public key the tracker
-    posts hits with, and the tracking settings."""
+    """One project per app, site or service. Owns the public key the SDK and
+    server-side reporters post events with, and the ingest settings."""
 
     __tablename__ = "projects"
     __table_args__ = (
@@ -147,24 +151,22 @@ class Project(Base):
     description: Mapped[str | None] = mapped_column(Text)
     url: Mapped[str | None] = mapped_column(String(2048))
 
-    # Public (collect) key. Plaintext is kept because it is not a secret; the
-    # hash is the lookup column for collect requests. Rotation replaces all three.
+    # Public (ingest) key. Plaintext is kept because it is not a secret; the
+    # hash is the lookup column for ingest requests. Rotation replaces all three.
     public_key: Mapped[str] = mapped_column(String(64), nullable=False)
     public_key_hash: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
     public_key_prefix: Mapped[str] = mapped_column(String(24), nullable=False)
 
-    # Tracking settings.
+    # Ingest settings.
     # IANA time zone used to bucket days in the dashboard and the stats API.
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC", server_default="UTC")
-    # Hostnames allowed to send hits (empty = any). The key is public, so this
-    # is the main defence against someone pointing a copied snippet elsewhere.
+    # Hostnames allowed to report events (empty = any). The key is public, so
+    # this is the main defence against someone pointing a copied snippet elsewhere.
     allowed_origins: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
-    # Pause tracking without touching the snippet.
-    collect_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
-    # Drop hits whose user agent looks like a crawler / headless browser.
-    exclude_bots: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
-    # Keep the raw visitor IP on each event (off by default: privacy-friendly
-    # mode stores only the daily hash + derived location).
+    # Pause ingestion without touching the snippet.
+    ingest_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    # Keep the raw client IP on each event (off by default: privacy-friendly
+    # mode stores only the daily hash).
     store_ip: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -173,57 +175,131 @@ class Project(Base):
     )
 
     account: Mapped[Account] = relationship(back_populates="projects")
+    issues: Mapped[list["Issue"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan", passive_deletes=True
+    )
     events: Mapped[list["Event"]] = relationship(
         back_populates="project", cascade="all, delete-orphan", passive_deletes=True
     )
 
 
-class Event(Base):
-    """One page view or custom event. Append-only; pruned by retention.
+class Issue(Base):
+    """The group every event lands in, keyed by ``fingerprint`` (unique per
+    project). ``number`` is the per-project human id (``#12``). Counters and
+    ``environments`` / ``releases`` are denormalised on ingest; ``releases``
+    keeps the last 10 seen, newest last."""
 
-    ``visitor_hash`` is the daily, per-project, cookie-less visitor id (see
-    ``dbcore.privacy``). ``referrer_host`` is NULL for direct traffic and for
-    internal navigation (same hostname as the page).
+    __tablename__ = "issues"
+    __table_args__ = (
+        UniqueConstraint("project_id", "fingerprint", name="uq_issue_fingerprint"),
+        UniqueConstraint("project_id", "number", name="uq_issue_number"),
+        Index("ix_issues_project_status_last_seen", "project_id", "status", "last_seen"),
+        Index("ix_issues_project_last_seen", "project_id", "last_seen"),
+    )
+
+    id: Mapped[uuid.UUID] = _pk()
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    number: Mapped[int] = mapped_column(Integer, nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    culprit: Mapped[str | None] = mapped_column(String(500))
+    type: Mapped[str | None] = mapped_column(String(200))
+    level: Mapped[str] = mapped_column(String(10), nullable=False, default="error", server_default="error")
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="open", server_default="open")
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    regressed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    event_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    user_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    environments: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    releases: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    # Plain bigint on purpose (no FK): events and issues point at each other
+    # and a circular FK would complicate create_all and purges. Retention
+    # recomputes it.
+    latest_event_id: Mapped[int | None] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    project: Mapped[Project] = relationship(back_populates="issues")
+    events: Mapped[list["Event"]] = relationship(
+        back_populates="issue", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class IssueUser(Base):
+    """Distinct affected users per issue. ``INSERT … ON CONFLICT DO NOTHING``
+    on ingest tells us whether the user is new to the issue, which drives
+    ``Issue.user_count`` without a ``COUNT(DISTINCT)``."""
+
+    __tablename__ = "issue_users"
+
+    issue_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("issues.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class Event(Base):
+    """One error occurrence (or captured message). Append-only; pruned by
+    retention.
+
+    ``user_hash`` is the project-scoped hash of the client's ``user.id`` when
+    sent, otherwise the daily cookie-less hash of (IP, user agent) — see
+    ``dbcore.privacy``. ``frames`` are ordered top of the stack first.
     """
 
     __tablename__ = "events"
     __table_args__ = (
         Index("ix_events_project_ts", "project_id", "ts"),
-        Index("ix_events_project_kind_ts", "project_id", "kind", "ts"),
+        Index("ix_events_issue_ts", "issue_id", "ts"),
+        Index("ix_events_project_level_ts", "project_id", "level", "ts"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=False), primary_key=True)
     project_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
+    issue_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("issues.id", ondelete="CASCADE"), nullable=False
+    )
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    kind: Mapped[str] = mapped_column(String(10), nullable=False, default="pageview", server_default="pageview")
-    name: Mapped[str | None] = mapped_column(String(60))             # custom event name (kind=event)
+    level: Mapped[str] = mapped_column(String(10), nullable=False, default="error", server_default="error")
+    type: Mapped[str | None] = mapped_column(String(200))
+    message: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    frames: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    stack_raw: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(String(2048))              # scheme://host/path, no query
+    path: Mapped[str | None] = mapped_column(String(2048))
     hostname: Mapped[str | None] = mapped_column(String(255))
-    path: Mapped[str] = mapped_column(String(2048), nullable=False, default="/", server_default="/")
-    title: Mapped[str | None] = mapped_column(String(200))
-    referrer: Mapped[str | None] = mapped_column(String(2048))      # scheme://host/path, no query
-    referrer_host: Mapped[str | None] = mapped_column(String(255))
-    utm_source: Mapped[str | None] = mapped_column(String(100))
-    utm_medium: Mapped[str | None] = mapped_column(String(100))
-    utm_campaign: Mapped[str | None] = mapped_column(String(100))
-    country: Mapped[str | None] = mapped_column(String(2))          # ISO 3166-1 alpha-2
-    region: Mapped[str | None] = mapped_column(String(100))
-    city: Mapped[str | None] = mapped_column(String(100))
-    device: Mapped[str | None] = mapped_column(String(10))          # desktop | mobile | tablet | bot
+    release: Mapped[str | None] = mapped_column(String(100))
+    environment: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="production", server_default="production"
+    )
+    platform: Mapped[str | None] = mapped_column(String(30))
+    sdk: Mapped[str | None] = mapped_column(String(60))
+    # The client's own user object ({id, email, name}), stored as sent (scrubbed).
+    user: Mapped[dict | None] = mapped_column("user", JSONB)
+    user_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     browser: Mapped[str | None] = mapped_column(String(40))
     os: Mapped[str | None] = mapped_column(String(40))
-    screen_w: Mapped[int | None] = mapped_column(Integer)
-    screen_h: Mapped[int | None] = mapped_column(Integer)
-    lang: Mapped[str | None] = mapped_column(String(16))
-    visitor_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    ip_hash: Mapped[str | None] = mapped_column(String(64))
+    device: Mapped[str | None] = mapped_column(String(10))            # desktop | mobile | tablet
     # Raw address, only when the project has store_ip on.
     ip: Mapped[str | None] = mapped_column(String(45))
-    source: Mapped[str] = mapped_column(String(10), nullable=False, default="script", server_default="script")
-    props: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    ip_hash: Mapped[str | None] = mapped_column(String(64))
+    tags: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    extra: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
+    breadcrumbs: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    source: Mapped[str] = mapped_column(String(10), nullable=False, default="api", server_default="api")
 
     project: Mapped[Project] = relationship(back_populates="events")
+    # Joined on purpose: the Event wire shape carries ``issue_number``.
+    issue: Mapped[Issue] = relationship(back_populates="events", lazy="joined")
 
 
 # --------------------------------------------------------------------------- #
@@ -237,8 +313,8 @@ class UsageCounter(Base):
     account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
     period_start: Mapped[date] = mapped_column(Date, nullable=False)
     period_end: Mapped[date] = mapped_column(Date, nullable=False)
-    # Hits received this period (page views + custom events), including the
-    # ones dropped past the plan budget, so the overage is visible.
+    # Events received this period by the ingest API, including the ones
+    # dropped past the plan budget, so the overage is visible.
     events: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     # set once when the events limit is first hit in a period (for one-shot PostHog event)
     events_limit_notified: Mapped[bool] = mapped_column(

@@ -4,13 +4,12 @@ import { defineConfig, devices } from "@playwright/test";
  * E2E suite for oops. Runs against an already-running stack (docker compose):
  *   E2E_BASE_URL  base of the Caddy entrypoint (default http://localhost:8084)
  * The API lives under <base>/api, the MCP endpoint at <base>/mcp and the
- * tracker at <base>/m.js.
+ * browser SDK at <base>/o.js.
  *
- * The browser gets a real Chrome UA: headless Chrome's default UA is (on
- * purpose) filtered out by the collect API as a bot. Chromium's Local Network
- * Access checks are disabled so a routed "public" host page (host.example) can
- * load /m.js and post hits to the loopback stack, like a real site would to
- * oops.3m4.net.
+ * The browser gets a normal desktop Chrome UA so events parse into a realistic
+ * browser / os / device. Chromium's Local Network Access checks are disabled so
+ * a routed "public" host page (https://host.example) can load /o.js from, and
+ * post events to, the loopback stack, like a real site would to oops.3m4.net.
  */
 export const BASE_URL = process.env.E2E_BASE_URL?.replace(/\/$/, "") || "http://localhost:8084";
 

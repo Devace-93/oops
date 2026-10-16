@@ -1,20 +1,26 @@
 /**
- * Minimal typed HTTP client for the oops management API.
+ * Minimal typed HTTP client for the oops management API (and the ingest
+ * endpoint, used by `report_error`).
  *
  * Deliberately dependency-free (global `fetch`) so the MCP server stays small
  * and the client can be swapped for a fake in tests.
  */
 import type {
   AuditEvent,
-  Breakdown,
+  AuditParams,
   CreateProjectInput,
-  Dimension,
-  EventsPage,
+  Event,
   EventsParams,
+  IngestEventInput,
+  IngestResult,
+  Issue,
+  IssueStatus,
+  IssuesParams,
   KeyInfo,
   Live,
+  Page,
   Project,
-  RotatedKey,
+  PurgeResult,
   Stats,
   StatsParams,
   Summary,
@@ -48,11 +54,6 @@ type Query = Record<string, string | number | boolean | undefined>;
 
 const enc = encodeURIComponent;
 
-function statsQuery(params: StatsParams = {}): Query {
-  const { filters, ...rest } = params;
-  return { ...rest, ...(filters ?? {}) } as Query;
-}
-
 export class OopsClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
@@ -67,17 +68,18 @@ export class OopsClient {
   private async request<T>(
     method: string,
     path: string,
-    opts: { query?: Query; body?: unknown } = {},
+    opts: { query?: Query; body?: unknown; headers?: Record<string, string>; auth?: boolean } = {},
   ): Promise<T> {
     const url = new URL(this.baseUrl + path);
     for (const [k, v] of Object.entries(opts.query ?? {})) {
       if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
     }
     const headers: Record<string, string> = {
-      "X-API-Key": this.apiKey,
       Accept: "application/json",
       "User-Agent": `oops-errors-mcp/${VERSION}`,
+      ...(opts.headers ?? {}),
     };
+    if (opts.auth !== false) headers["X-API-Key"] = this.apiKey;
     if (opts.body !== undefined) headers["Content-Type"] = "application/json";
 
     const res = await this.fetchImpl(url, {
@@ -117,8 +119,8 @@ export class OopsClient {
 
   // --- Projects ---------------------------------------------------------- //
 
-  listProjects(params: { q?: string } = {}): Promise<{ items: Project[]; total: number }> {
-    return this.request("GET", "/projects", { query: params });
+  listProjects(): Promise<{ items: Project[] }> {
+    return this.request("GET", "/projects");
   }
 
   createProject(input: CreateProjectInput): Promise<Project> {
@@ -137,7 +139,8 @@ export class OopsClient {
     return this.request("DELETE", `/projects/${enc(id)}`);
   }
 
-  rotateProjectKey(id: string): Promise<RotatedKey> {
+  /** New public key; the old one stops working at once. Returns the updated project. */
+  rotatePublicKey(id: string): Promise<Project> {
     return this.request("POST", `/projects/${enc(id)}/rotate-key`);
   }
 
@@ -145,30 +148,49 @@ export class OopsClient {
     return this.request("GET", `/projects/${enc(projectId)}/summary`);
   }
 
-  purgeEvents(projectId: string, before?: string): Promise<{ deleted: number; before: string | null }> {
-    return this.request("DELETE", `/projects/${enc(projectId)}/events`, { query: { before } });
+  /** Purge every event and issue of the project. */
+  purgeEvents(projectId: string): Promise<PurgeResult> {
+    return this.request("DELETE", `/projects/${enc(projectId)}/events`);
+  }
+
+  // --- Issues and events --------------------------------------------------- //
+
+  listIssues(projectId: string, params: IssuesParams = {}): Promise<Page<Issue>> {
+    return this.request("GET", `/projects/${enc(projectId)}/issues`, { query: params as Query });
+  }
+
+  /** `issueRef` is the issue uuid or its per-project number as a string (see `parseIssueRef`). */
+  getIssue(projectId: string, issueRef: string): Promise<Issue> {
+    return this.request("GET", `/projects/${enc(projectId)}/issues/${enc(issueRef)}`);
+  }
+
+  updateIssue(projectId: string, issueRef: string, status: IssueStatus): Promise<Issue> {
+    return this.request("PATCH", `/projects/${enc(projectId)}/issues/${enc(issueRef)}`, { body: { status } });
+  }
+
+  bulkUpdateIssues(projectId: string, ids: string[], status: IssueStatus): Promise<{ updated: number }> {
+    return this.request("POST", `/projects/${enc(projectId)}/issues/bulk`, { body: { ids, status } });
+  }
+
+  listIssueEvents(projectId: string, issueRef: string, params: { page?: number; per_page?: number } = {}): Promise<Page<Event>> {
+    return this.request("GET", `/projects/${enc(projectId)}/issues/${enc(issueRef)}/events`, { query: params });
+  }
+
+  listEvents(projectId: string, params: EventsParams = {}): Promise<Page<Event>> {
+    return this.request("GET", `/projects/${enc(projectId)}/events`, { query: params as Query });
+  }
+
+  getEvent(projectId: string, eventId: string): Promise<Event> {
+    return this.request("GET", `/projects/${enc(projectId)}/events/${enc(eventId)}`);
   }
 
   // --- Stats ------------------------------------------------------------- //
 
   stats(projectId: string, params: StatsParams = {}): Promise<Stats> {
-    return this.request("GET", `/projects/${enc(projectId)}/stats`, { query: statsQuery(params) });
+    return this.request("GET", `/projects/${enc(projectId)}/stats`, { query: params as Query });
   }
 
-  breakdown(projectId: string, by: Dimension, params: StatsParams = {}, page = 1, per_page = 50): Promise<Breakdown> {
-    return this.request("GET", `/projects/${enc(projectId)}/stats/breakdown`, {
-      query: { ...statsQuery(params), by, page, per_page },
-    });
-  }
-
-  events(projectId: string, params: EventsParams = {}): Promise<EventsPage> {
-    const { kind, q, page, per_page, ...stats } = params;
-    return this.request("GET", `/projects/${enc(projectId)}/events`, {
-      query: { ...statsQuery(stats), kind, q, page, per_page },
-    });
-  }
-
-  live(projectId: string): Promise<Live & { project_id: string }> {
+  live(projectId: string): Promise<Live> {
     return this.request("GET", `/projects/${enc(projectId)}/live`);
   }
 
@@ -178,7 +200,22 @@ export class OopsClient {
     return this.request("GET", "/account/usage");
   }
 
-  auditLog(params: { limit?: number; action?: string } = {}): Promise<{ items: AuditEvent[] }> {
-    return this.request("GET", "/account/audit", { query: params });
+  auditLog(params: AuditParams = {}): Promise<Page<AuditEvent>> {
+    return this.request("GET", "/account/audit", { query: params as Query });
+  }
+
+  // --- Ingest (project public key, no API key) ---------------------------- //
+
+  /**
+   * Report one event into a project. Authenticated with the project's PUBLIC
+   * key (`X-Project-Key`), never the API key: that is the only credential the
+   * ingest endpoint understands. Always 202; `ok: false` carries a drop reason.
+   */
+  ingest(publicKey: string, event: IngestEventInput): Promise<IngestResult> {
+    return this.request("POST", "/ingest", {
+      body: event,
+      auth: false,
+      headers: { "X-Project-Key": publicKey },
+    });
   }
 }

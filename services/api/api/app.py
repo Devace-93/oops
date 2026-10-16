@@ -22,12 +22,13 @@ from .extensions import limiter
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    # A hit is a few hundred bytes; anything bigger than 64 KB is a 413.
+    # An event with a stack and breadcrumbs is a few KB; anything bigger than
+    # 64 KB is a 413 (CONTRACT.md caps the body there).
     app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
 
     # ---- CORS --------------------------------------------------------------
-    # Management routes: dashboard (and apex) origins only. Collect routes are
-    # called from tracked third-party sites, so they allow any origin (no
+    # Management routes: dashboard (and apex) origins only. Ingest routes are
+    # called from the apps that embed the SDK, so they allow any origin (no
     # credentials). flask-cors matches the FIRST resource whose pattern fits,
     # so the public ones come first.
     try:
@@ -38,7 +39,7 @@ def create_app() -> Flask:
         CORS(
             app,
             resources={
-                r"/api/collect*": public_origins,
+                r"/api/ingest*": public_origins,
                 r"/api/features": public_origins,
                 r"/api/*": {"origins": [config.dashboard_url, config.app_base_url], "supports_credentials": True},
             },
@@ -53,15 +54,15 @@ def create_app() -> Flask:
     from .blueprints.account import bp as account_bp
     from .blueprints.apikeys import bp as apikeys_bp
     from .blueprints.auth import bp as auth_bp
-    from .blueprints.collect import bp as collect_bp
+    from .blueprints.ingest import bp as ingest_bp
+    from .blueprints.issues import bp as issues_bp
     from .blueprints.projects import bp as projects_bp
-    from .blueprints.stats import bp as stats_bp
     from .features import bp as features_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(projects_bp, url_prefix="/api/projects")
-    app.register_blueprint(stats_bp, url_prefix="/api/projects/<project_id>")
-    app.register_blueprint(collect_bp, url_prefix="/api/collect")
+    app.register_blueprint(issues_bp, url_prefix="/api/projects/<project_id>")
+    app.register_blueprint(ingest_bp, url_prefix="/api/ingest")
     app.register_blueprint(account_bp, url_prefix="/api/account")
     app.register_blueprint(apikeys_bp, url_prefix="/api/apikeys")
     app.register_blueprint(features_bp, url_prefix="/api/features")
@@ -100,7 +101,7 @@ def _register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(HTTPException)
     def _handle_http_exception(err: HTTPException):
-        # Map any other werkzeug error (404, 405, 400, ...) into our envelope.
+        # Map any other werkzeug error (404, 405, 400, 413, ...) into our envelope.
         code = (err.name or "error").lower().replace(" ", "_")
         return (
             jsonify({"error": {"code": code, "message": err.description or err.name}}),

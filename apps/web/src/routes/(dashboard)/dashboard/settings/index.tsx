@@ -17,11 +17,11 @@ import roleRegistry from "../../../../../../../packages/shared/api_key_roles.jso
 const REGISTRY_ROLES = roleRegistry.roles as Record<ApiKeyRole, RoleInfo>;
 const REGISTRY_DEFAULT = roleRegistry.default_role as ApiKeyRole;
 
+// CONTRACT.md → Authorization: every audited action.
 const AUDIT_ACTIONS = [
-  "project.create", "project.update", "project.delete",
-  "environment.create", "environment.update", "environment.delete", "environment.rotate_key",
-  "flag.create", "flag.update", "flag.delete", "flag.copy",
-  "flag_state.update",
+  "project.create", "project.update", "project.delete", "project.rotate_key",
+  "issue.update", "issues.bulk_update",
+  "events.purge",
   "apikey.create", "apikey.revoke",
   "auth.denied",
 ];
@@ -71,7 +71,7 @@ export default component$(() => {
     audit.loading = true;
     audit.error = "";
     try {
-      const res = await api.audit(50, audit.action);
+      const res = await api.audit({ action: audit.action || undefined, per_page: 50 });
       audit.items = res.items;
     } catch (e) {
       audit.error = errorMessage(i18n, e, "audit.loadFailed");
@@ -88,7 +88,7 @@ export default component$(() => {
         api.listApiKeys(),
         api.apiKeyRoles().catch(() => null),
       ]);
-      state.keys = keys;
+      state.keys = keys.items;
       if (roles) {
         state.roles = roles.roles;
         state.newRole = roles.default_role;
@@ -117,7 +117,7 @@ export default component$(() => {
     state.limitReached = false;
     try {
       const res = await api.createApiKey(state.newName.trim(), state.newRole);
-      state.createdSecret = res.key;
+      state.createdSecret = res.secret;
       state.newName = "";
       load();
     } catch (e) {

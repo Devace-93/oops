@@ -1,7 +1,7 @@
 # oops — developer convenience wrapper around docker compose.
 # All compose files live in ./deploy. Local entrypoint: http://localhost:8084
-# (8080 belongs to the 3m4 shortener stack, 8081 to exp, 8082 to retro, on the
-# same machine).
+# (8080 belongs to the 3m4 shortener stack, 8081 to exp, 8082 to retro, 8083 to
+# metrics, on the same machine).
 
 # --env-file makes the repo-root .env drive build-arg interpolation (VITE_* are
 # inlined into the web bundle at build time), not just runtime container env.
@@ -38,7 +38,7 @@ ps: ## Show service status
 migrate: ## Run create-all + alembic upgrade
 	$(COMPOSE) run --rm migrate python -m dbcore.cli upgrade
 
-prune: ## Delete events older than each plan's retention window
+prune: ## Delete events older than each plan's retention window (and issues left empty)
 	$(COMPOSE) run --rm migrate python -m dbcore.cli prune-events
 
 shell-api: ## Shell into the api container
@@ -53,7 +53,7 @@ clean: ## Stop and remove volumes (DESTRUCTIVE: wipes the database)
 sdk: ## Build the browser SDK into apps/web/public (o.js + o/v1.js)
 	cd packages/sdk && bun install && bun run build
 
-smoke: ## Curl the running stack: health, sdk headers, collect round-trip (BASE_URL)
+smoke: ## Curl the running stack: health, SDK headers, ingest → issues round-trip (BASE_URL)
 	BASE_URL=$(BASE_URL) sh deploy/smoke.sh
 
 e2e: ## Run the Playwright end-to-end suite against the running stack (E2E_BASE_URL)

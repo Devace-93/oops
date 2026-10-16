@@ -39,7 +39,7 @@ async function main(): Promise<void> {
     ts: new Date().toISOString(),
     event: "server.start",
     transport: "stdio",
-    actor: { account: keyInfo.account.id, prefix: keyInfo.key.prefix, role: keyInfo.key.role },
+    actor: { account: keyInfo.account.id, prefix: keyInfo.prefix, role: keyInfo.role },
     meta: { api_url: cfg.apiUrl, scopes: keyInfo.scopes },
   });
 }

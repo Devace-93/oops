@@ -73,8 +73,9 @@ export default component$(() => {
         <div class="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700">
           <span class="grid h-5 w-5 place-items-center rounded bg-primary-600" aria-hidden="true">
             <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
-              <rect x="1" y="5" width="18" height="10" rx="5" fill="#ffffff" fill-opacity="0.35" />
-              <circle cx="14" cy="10" r="3.5" fill="#ffffff" />
+              <ellipse cx="10" cy="11.5" rx="4.5" ry="5.5" fill="#ffffff" />
+              <circle cx="10" cy="4.5" r="2.4" fill="#ffffff" />
+              <path d="M5.5 9H3M5.5 12.5H3M14.5 9H17M14.5 12.5H17" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" />
             </svg>
           </span>
           {tr(i18n, "sponsors.badgeLabel")}
@@ -102,7 +103,7 @@ export const head: DocumentHead = {
     {
       name: "description",
       content:
-        "Supporters of oops, the open-source feature-flag service. Pro/Supporter subscribers appear here with a badge.",
+        "Supporters of oops, the open-source error-tracking service. Pro/Supporter subscribers appear here with a badge.",
     },
   ],
 };

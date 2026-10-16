@@ -4,8 +4,8 @@
 requester. Backend enforcement is the source of truth — the frontend only
 mirrors these switches (delivered via ``/auth/me`` and ``GET /api/features``).
 
-Never gate: login, the RevenueCat webhook. The collect API is gated by
-``collect-api`` as an emergency kill switch (503), never as a feature gate.
+Never gate: login, the RevenueCat webhook. The ingest API is gated by
+``ingest-api`` as an emergency kill switch (503), never as a feature gate.
 """
 from __future__ import annotations
 

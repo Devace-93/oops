@@ -1,23 +1,20 @@
 # Production overrides. oops shares the Hetzner box with the 3m4 shortener
-# (and exp, retro), whose Caddy already owns ports 80/443. oops therefore
-# runs WITHOUT its own Caddy in production: api, web and mcp join the external
-# `edge` network and the 3m4 Caddyfile.prod routes oops.3m4.net to them by
-# container name (oops-api-1, oops-web-1, oops-errors-mcp-1).
+# (and exp, retro, metrics), whose Caddy already owns ports 80/443. oops
+# therefore runs WITHOUT its own Caddy in production: api, web and mcp join
+# the external `edge` network and the 3m4 Caddyfile.prod routes oops.3m4.net
+# to them by container name (oops-api-1, oops-web-1, oops-mcp-1).
 #
-# The GeoLite2 database is shared with the shortener: /opt/3m4/deploy/geoip is
-# kept fresh by 3m4's weekly geoip-update.sh cron and mounted read-only here.
+# No geo database: oops does not look up locations.
 #
 #   docker network create edge            # once per server
 #   cd /opt/oops/deploy
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#   docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 services:
   caddy:
     profiles: ["disabled"]
 
   api:
     networks: [default, edge]
-    volumes:
-      - /opt/3m4/deploy/geoip:/geoip:ro
   web:
     networks: [default, edge]
   mcp:

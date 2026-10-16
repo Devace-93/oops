@@ -259,7 +259,7 @@ Each breakdown holds the top 10 values by events.
 | GET | `/apikeys/roles` | Roles → scopes from `api_key_roles.json`. |
 | POST | `/apikeys` | `{ name, role? }` → 201 `{ key: ApiKey, secret }`. 402 past the plan. JWT only. |
 | DELETE | `/apikeys/<id>` | Revoke → 204. JWT only. |
-| GET | `/apikeys/me` | The calling key: `{ id, name, role, scopes, account }`. |
+| GET | `/apikeys/me` | The calling key: `{ id, name, role, prefix, scopes, account }`. |
 | GET | `/features` | `{ features: { key: bool } }` for the caller (anonymous allowed). |
 | GET | `/billing/offerings`, POST `/billing/webhook` | Unchanged from the sibling apps (RevenueCat). Hidden while `early-access` is ON. |
 | GET | `/healthz` | `{ "status": "ok" }` |

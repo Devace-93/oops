@@ -6,14 +6,16 @@ import { METRIC_LABEL } from "../lib/stats";
 
 /**
  * Single-series column chart (SVG, responsive via viewBox). One metric at a
- * time: columns ≤ 24px wide with a 4px rounded cap, hairline gridlines with
- * compact tick labels, a per-column hover / focus tooltip and a hidden table
- * for assistive tech. No legend: the title names the one series.
+ * time (events or affected users): columns ≤ 24px wide with a 4px rounded cap,
+ * hairline gridlines with compact tick labels, a per-column hover / focus
+ * tooltip and a hidden table for assistive tech. No legend: the title names
+ * the one series. Buckets are labelled in the project's time zone.
  */
 interface Props {
   points: SeriesPoint[];
   metric: Metric;
   interval: Interval;
+  tz?: string;
 }
 
 const W = 960;
@@ -28,7 +30,7 @@ function niceMax(max: number): number {
   return step * pow;
 }
 
-export const Chart = component$<Props>(({ points, metric, interval }) => {
+export const Chart = component$<Props>(({ points, metric, interval, tz }) => {
   const i18n = useI18n();
   const hover = useStore({ i: -1 });
   const n = points.length;
@@ -72,10 +74,10 @@ export const Chart = component$<Props>(({ points, metric, interval }) => {
           const active = hover.i === i;
           return (
             <g
-              key={p.bucket}
+              key={p.ts}
               tabindex={0}
               role="listitem"
-              aria-label={`${bucketLabel(p.bucket, interval, i18n.lang, true)}: ${fmtNumber(v, i18n.lang)} ${metricLabel}`}
+              aria-label={`${bucketLabel(p.ts, interval, i18n.lang, true, tz)}: ${fmtNumber(v, i18n.lang)} ${metricLabel}`}
               class="outline-none"
               onMouseEnter$={() => (hover.i = i)}
               onFocus$={() => (hover.i = i)}
@@ -88,7 +90,7 @@ export const Chart = component$<Props>(({ points, metric, interval }) => {
               {barH === 0 && <rect x={x} y={base - 1} width={bw} height={1} class="fill-slate-300" />}
               {i % labelEvery === 0 && (
                 <text x={PAD.left + i * band + band / 2} y={H - 8} text-anchor="middle" class="fill-slate-400" font-size="11">
-                  {bucketLabel(p.bucket, interval, i18n.lang)}
+                  {bucketLabel(p.ts, interval, i18n.lang, false, tz)}
                 </text>
               )}
             </g>
@@ -102,7 +104,7 @@ export const Chart = component$<Props>(({ points, metric, interval }) => {
         >
           <div class="text-base font-semibold text-slate-900">{fmtNumber(h[metric], i18n.lang)}</div>
           <div class="text-slate-500">
-            {metricLabel} · {bucketLabel(h.bucket, interval, i18n.lang, true)}
+            {metricLabel} · {bucketLabel(h.ts, interval, i18n.lang, true, tz)}
           </div>
         </div>
       )}
@@ -110,8 +112,8 @@ export const Chart = component$<Props>(({ points, metric, interval }) => {
         <caption>{metricLabel}</caption>
         <tbody>
           {points.map((p) => (
-            <tr key={p.bucket}>
-              <th scope="row">{p.bucket}</th>
+            <tr key={p.ts}>
+              <th scope="row">{p.ts}</th>
               <td>{p[metric]}</td>
             </tr>
           ))}

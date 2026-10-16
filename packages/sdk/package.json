@@ -1,8 +1,8 @@
 {
-  "name": "@oops/tracker",
+  "name": "@oops/sdk",
   "version": "0.1.0",
   "private": true,
-  "description": "oops tracker script: one tag, zero dependencies, ~1 KB, served at /m.js",
+  "description": "oops browser SDK: one tag, zero dependencies, under 4 KB gzipped, served at /o.js",
   "license": "MIT",
   "type": "module",
   "scripts": {

@@ -3,7 +3,7 @@ import { Link, useNavigate, type DocumentHead } from "@builder.io/qwik-city";
 import { api, ApiRequestError } from "../../../lib/api";
 import { capture } from "../../../lib/analytics";
 import { errorMessage, isLimitError } from "../../../lib/errors";
-import { browserTz, fmtCompact, fmtDateTime, isLive, slugify, timezones } from "../../../lib/stats";
+import { browserTz, fmtCompact, fmtRelative, isLive, slugify, timezones } from "../../../lib/stats";
 import { UsageBar } from "../../../components/usage-bar";
 import { EarlyAccessBanner } from "../../../components/early-access-banner";
 import { Modal } from "../../../components/modal";
@@ -11,6 +11,7 @@ import { FeaturesContext } from "../../../lib/features";
 import { tr, useI18n } from "../../../i18n";
 import type { MeResponse, Project } from "../../../lib/types";
 
+/** Projects: one card per app with open issues, events 24h / 30d and the last event. */
 export default component$(() => {
   const nav = useNavigate();
   const features = useContext(FeaturesContext);
@@ -78,7 +79,7 @@ export default component$(() => {
       form.key = "";
       form.keyTouched = false;
       form.url = "";
-      // Land on settings: that is where the public key and install snippets live.
+      // Land on settings: that is where the public key and the SDK snippet live.
       await nav(`/dashboard/projects/${project.id}/settings`);
     } catch (e) {
       form.limitReached = isLimitError(e);
@@ -151,7 +152,7 @@ export default component$(() => {
             {overage ? (
               <p class="mt-2 text-xs text-amber-700">{tr(i18n, "dash.eventsOverage", { n: fmtCompact(usage.events_dropped, i18n.lang) })}</p>
             ) : (
-              <p class="mt-2 text-xs text-slate-400">{tr(i18n, "dash.usageEventsHint")}</p>
+              <p class="mt-2 text-xs text-slate-400">{tr(i18n, "dash.usageIngestHint")}</p>
             )}
           </div>
         </div>
@@ -183,13 +184,14 @@ export default component$(() => {
             </button>
           </div>
         ) : state.projects.length === 0 ? (
-          <div class="card p-10 text-center text-sm text-slate-500">{tr(i18n, "dash.empty")}</div>
+          <div class="card p-10 text-center text-sm text-slate-500">{tr(i18n, "dash.emptyIssues")}</div>
         ) : visible.length === 0 ? (
           <div class="card p-10 text-center text-sm text-slate-500">{tr(i18n, "dash.noMatch")}</div>
         ) : (
           <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {visible.map((p) => {
               const live = isLive(p.counts.last_event_at);
+              const open = p.counts.open_issues;
               return (
                 <Link key={p.id} href={`/dashboard/projects/${p.id}`} class="card flex flex-col p-5 hover:border-primary-300" data-testid="project-card">
                   <div class="flex items-start justify-between gap-2">
@@ -201,20 +203,20 @@ export default component$(() => {
                   )}
                   <div class="mt-4 grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <div class="text-lg font-bold text-slate-900">{fmtCompact(p.counts.pageviews_today, i18n.lang)}</div>
-                      <div class="text-xs text-slate-500">{tr(i18n, "dash.today")}</div>
+                      <div class={["text-lg font-bold", open > 0 ? "text-red-700" : "text-slate-900"]}>{fmtCompact(open, i18n.lang)}</div>
+                      <div class="text-xs text-slate-500">{tr(i18n, "dash.openIssues")}</div>
                     </div>
                     <div>
-                      <div class="text-lg font-bold text-slate-900">{fmtCompact(p.counts.pageviews_30d, i18n.lang)}</div>
-                      <div class="text-xs text-slate-500">{tr(i18n, "dash.views30d")}</div>
+                      <div class="text-lg font-bold text-slate-900">{fmtCompact(p.counts.events_24h, i18n.lang)}</div>
+                      <div class="text-xs text-slate-500">{tr(i18n, "dash.events24h")}</div>
                     </div>
                     <div>
-                      <div class="text-lg font-bold text-slate-900">{fmtCompact(p.counts.visitors_30d, i18n.lang)}</div>
-                      <div class="text-xs text-slate-500">{tr(i18n, "dash.visitors30d")}</div>
+                      <div class="text-lg font-bold text-slate-900">{fmtCompact(p.counts.events_30d, i18n.lang)}</div>
+                      <div class="text-xs text-slate-500">{tr(i18n, "dash.events30d")}</div>
                     </div>
                   </div>
                   <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    {!p.collect_enabled ? (
+                    {!p.ingest_enabled ? (
                       <span class="badge bg-amber-100 text-amber-800">{tr(i18n, "pnav.paused")}</span>
                     ) : live ? (
                       <span class="badge bg-green-100 text-green-800">
@@ -222,9 +224,11 @@ export default component$(() => {
                         {tr(i18n, "pnav.live")}
                       </span>
                     ) : p.counts.last_event_at ? (
-                      <span class="badge bg-slate-100 text-slate-600">{tr(i18n, "dash.lastSeen", { when: fmtDateTime(p.counts.last_event_at, i18n.lang) })}</span>
+                      <span class="badge bg-slate-100 text-slate-600" title={p.counts.last_event_at}>
+                        {tr(i18n, "dash.lastEvent", { when: fmtRelative(p.counts.last_event_at, i18n.lang) })}
+                      </span>
                     ) : (
-                      <span class="badge bg-slate-100 text-slate-600">{tr(i18n, "dash.noDataYet")}</span>
+                      <span class="badge bg-slate-100 text-slate-600">{tr(i18n, "dash.noEventsYet")}</span>
                     )}
                     <span class="ml-auto font-medium text-primary-600">{tr(i18n, "dash.openProject")}</span>
                   </div>

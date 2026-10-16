@@ -1,7 +1,7 @@
 {
   "name": "oops-errors-mcp",
   "version": "0.1.0",
-  "description": "MCP server for oops, the privacy-friendly web-analytics service: read page views, visitors, pages, referrers, countries and devices per project, inspect raw events and manage projects, with role-based tool access and audit logging.",
+  "description": "MCP server for oops, the open-source error-tracking service: list and triage issues, inspect error events and stack traces, read stats, resolve or ignore issues, manage projects and report an agent's own failures, with role-based tool access and audit logging.",
   "license": "MIT",
   "author": "Enrique Magallon Alvarez",
   "repository": {
@@ -12,10 +12,10 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "web-analytics",
-    "analytics",
-    "page-views",
-    "privacy",
+    "error-tracking",
+    "exceptions",
+    "crash-reporting",
+    "issues",
     "oops",
     "rbac"
   ],

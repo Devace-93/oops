@@ -8,7 +8,7 @@ export default component$(() => {
   const i18n = useI18n();
   const early = features["early-access"];
   const pages = [
-    { href: "/info/docs", title: tr(i18n, "info.docsTitle"), body: tr(i18n, "info.docsBody") },
+    { href: "/info/docs", title: tr(i18n, "info.docsTitle"), body: tr(i18n, "info.docsBodyErrors") },
     {
       href: "/info/pricing",
       title: early ? tr(i18n, "info.plannedPricingTitle") : tr(i18n, "info.pricingTitle"),

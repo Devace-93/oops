@@ -7,7 +7,7 @@ export default {
         // Semantic palette: every shade resolves to a CSS variable so the
         // dark theme (data-theme="dark" / prefers-color-scheme) can remap the
         // whole scale in global.css without touching components. `primary`
-        // is the brand violet; `white` is the page surface.
+        // is the brand fuchsia; `white` is the page surface.
         white: "rgb(var(--c-white) / <alpha-value>)",
         slate: {
           50: "rgb(var(--c-slate-50) / <alpha-value>)",
@@ -58,6 +58,13 @@ export default {
           700: "rgb(var(--c-amber-700) / <alpha-value>)",
           800: "rgb(var(--c-amber-800) / <alpha-value>)",
           900: "rgb(var(--c-amber-900) / <alpha-value>)",
+        },
+        blue: {
+          100: "rgb(var(--c-blue-100) / <alpha-value>)",
+          200: "rgb(var(--c-blue-200) / <alpha-value>)",
+          600: "rgb(var(--c-blue-600) / <alpha-value>)",
+          700: "rgb(var(--c-blue-700) / <alpha-value>)",
+          800: "rgb(var(--c-blue-800) / <alpha-value>)",
         },
         green: {
           50: "rgb(var(--c-green-50) / <alpha-value>)",

@@ -3,8 +3,8 @@ import { tr, useI18n } from "../i18n";
 
 /**
  * Full-page "we're building" curtain, shown when the `site-building` feature
- * is ON (see routes/layout.tsx). The evaluation API and the MCP server keep
- * answering — only the web UI is curtained.
+ * is ON (see routes/layout.tsx). The ingest API, the SDK script and the MCP
+ * server keep answering — only the web UI is curtained.
  */
 export const BuildingState = component$(() => {
   const i18n = useI18n();
@@ -36,9 +36,10 @@ export const BuildingState = component$(() => {
         {/* hanging toggle block */}
         <g>
           <rect x="152" y="100" width="68" height="34" rx="8" fill="#c026d3" />
-          <rect x="162" y="110" width="30" height="14" rx="7" fill="#ffffff" fill-opacity="0.35" />
-          <circle cx="185" cy="117" r="5" fill="#ffffff" />
-          <text x="207" y="122" text-anchor="middle" font-family="ui-sans-serif, system-ui" font-size="13" font-weight="700" fill="#ffffff">
+          <ellipse cx="172" cy="118" rx="5" ry="6.5" fill="#ffffff" />
+          <circle cx="172" cy="109.5" r="2.8" fill="#ffffff" />
+          <path d="M166 115h-3M166 119.5h-3M178 115h3M178 119.5h3" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" />
+          <text x="201" y="122" text-anchor="middle" font-family="ui-sans-serif, system-ui" font-size="13" font-weight="700" fill="#ffffff">
             oops
           </text>
         </g>
@@ -65,7 +66,7 @@ export const BuildingState = component$(() => {
         {tr(i18n, "building.title")}
       </h1>
       <p class="mx-auto mt-3 max-w-md text-slate-500">
-        {tr(i18n, "building.body")}
+        {tr(i18n, "building.bodyErrors")}
       </p>
       <p class="mt-8 text-xs text-slate-400">{tr(i18n, "building.footer")}</p>
     </div>

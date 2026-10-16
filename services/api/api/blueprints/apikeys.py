@@ -51,8 +51,8 @@ def list_keys():
             .where(ApiKey.account_id == g.account_id, ApiKey.revoked_at.is_(None))
             .order_by(ApiKey.created_at.desc())
         ).all()
-        body = [serialize_api_key(k) for k in rows]
-    return jsonify(body)
+        items = [serialize_api_key(k) for k in rows]
+    return jsonify({"items": items})
 
 
 @bp.get("/roles")
@@ -108,22 +108,22 @@ def create_key():
         )
         session.add(api_key)
         session.flush()
-        key_id = str(api_key.id)
         audit.record(
             session,
             account_id=g.account_id,
             action="apikey.create",
             target_type="api_key",
-            target_id=key_id,
+            target_id=str(api_key.id),
             meta={"name": name, "prefix": prefix, "role": role},
             **actor(),
         )
+        session.flush()
+        session.refresh(api_key)
+        body = {"key": serialize_api_key(api_key), "secret": full_key}
 
+    capture(str(g.account_id), "api_key_created", {"role": role}, groups={"account": str(g.account_id)})
     # Return the full key exactly once — it is never recoverable afterwards.
-    return (
-        jsonify({"id": key_id, "key": full_key, "prefix": prefix, "name": name, "role": role}),
-        201,
-    )
+    return jsonify(body), 201
 
 
 @bp.delete("/<key_id>")
@@ -164,11 +164,15 @@ def me():
     """
     with session_scope() as session:
         account = session.get(Account, g.account_id)
-        if account is None:
+        api_key = session.get(ApiKey, g.api_key_id)
+        if account is None or api_key is None:
             raise ApiError(404, "not_found", "Account not found.")
         body = {
+            "id": str(api_key.id),
+            "name": api_key.name,
+            "role": api_key.role,
+            "prefix": api_key.prefix,
+            "scopes": sorted(scopes_for(api_key.role)),
             "account": serialize_account(account),
-            "key": {"id": str(g.api_key_id), "prefix": g.api_key_prefix, "role": g.role},
-            "scopes": sorted(scopes_for(g.role)),
         }
     return jsonify(body)

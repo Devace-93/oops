@@ -1,15 +1,15 @@
 # oops-errors-mcp
 
 [Model Context Protocol](https://modelcontextprotocol.io) server for
-[oops](https://oops.3m4.net), the privacy-friendly web-analytics service.
-Lets an AI agent (Claude Code, Claude Desktop, Cursor, the MCP Inspector, your
-own app) read page views, visitors, pages, referrers, countries, devices and
-custom events per project, inspect raw hits, and manage projects — with
-**role-based tool access**, a **human approval step** for destructive actions,
-and an **audit trail**.
+[oops](https://oops.3m4.net), the open-source error-tracking service. Lets an
+AI agent (Claude Code, Claude Desktop, Cursor, the MCP Inspector, your own
+app) list and triage issues, read stack traces and breadcrumbs, resolve or
+ignore errors, check stats and manage projects — and report its *own*
+failures into a project — with **role-based tool access**, a **human approval
+step** for destructive actions, and an **audit trail**.
 
 ```
-npx oops-errors-mcp                     # stdio (local hosts)
+npx oops-errors-mcp              # stdio (local hosts)
 https://oops.3m4.net/mcp         # Streamable HTTP (remote hosts)
 ```
 
@@ -26,7 +26,7 @@ claude mcp add oops --scope user \
   -- npx -y oops-errors-mcp
 ```
 
-**Cursor / Claude Desktop / any JSON config**
+**Claude Desktop / Cursor / any JSON config**
 
 ```json
 {
@@ -47,21 +47,22 @@ claude mcp add --transport http oops https://oops.3m4.net/mcp \
   --header "Authorization: Bearer oops_live_…"
 ```
 
-Then ask: *"how is Kinegram doing this week?"*, *"which countries visit the
-pricing page most?"*, *"what did the newsletter campaign bring?"*, *"list the
-signup events from mobile"*, *"write the weekly report"*.
+Then ask: *"what is breaking in checkout today?"*, *"show me issue #12 and
+its stack"*, *"which errors affect the most users since release 1.4.2?"*,
+*"resolve every issue from the old release"*, *"triage the API project"*,
+*"report this failure to the agents project"*.
 
 ## Configuration
 
-| Variable            | Default                       | Meaning |
-|---------------------|-------------------------------|---------|
+| Variable         | Default                       | Meaning |
+|------------------|-------------------------------|---------|
 | `OOPS_API_KEY`   | —                             | Required for stdio. The oops management API key (`oops_live_…`). |
-| `OOPS_API_URL`   | `https://oops.3m4.net/api` | API base URL. Self-hosters point this at their instance. |
+| `OOPS_API_URL`   | `https://oops.3m4.net/api`    | API base URL. Self-hosters point this at their instance. |
 | `OOPS_AUDIT_LOG` | `stderr`                      | `stderr`, `none`, or a file path (JSON lines). |
 | `OOPS_MCP_PORT`  | `3333`                        | HTTP entrypoint only. |
 
 Project public keys (`oops_pub_…`) are **not** accepted: they can only call
-the collect API and carry no role.
+the ingest API and carry no role.
 
 ## Roles and tools (RBAC)
 
@@ -73,28 +74,47 @@ and a bug in the server can hide access but never grant it.
 
 | Tool                 | Scope             | viewer | editor | admin | Notes |
 |----------------------|-------------------|:------:|:------:|:-----:|-------|
-| `list_projects`      | `projects:read`   | ✓ | ✓ | ✓ | search with `q`; 30-day counts, last hit |
-| `get_project`        | `projects:read`   | ✓ | ✓ | ✓ | public key, time zone, allowed hostnames, switches |
-| `project_summary`    | `stats:read`      | ✓ | ✓ | ✓ | today / yesterday / 7d / 30d, live, all-time |
-| `get_stats`          | `stats:read`      | ✓ | ✓ | ✓ | totals, previous period, series, every breakdown, live; `filters` |
-| `get_breakdown`      | `stats:read`      | ✓ | ✓ | ✓ | one dimension, paginated |
-| `list_events`        | `stats:read`      | ✓ | ✓ | ✓ | raw hits with props; `kind`, `q` |
-| `get_live`           | `stats:read`      | ✓ | ✓ | ✓ | last 5 minutes |
+| `list_projects`      | `projects:read`   | ✓ | ✓ | ✓ | open issues, events 24h / 30d, users 30d, last event; `q` |
+| `get_project`        | `projects:read`   | ✓ | ✓ | ✓ | public key, time zone, allowed origins, switches |
+| `list_issues`        | `issues:read`     | ✓ | ✓ | ✓ | `status`, `level`, `environment`, `release`, `q`, `period`, `sort`, paging |
+| `get_issue`          | `issues:read`     | ✓ | ✓ | ✓ | uuid, `12` or `#12`; includes the latest event with its stack |
+| `list_issue_events`  | `issues:read`     | ✓ | ✓ | ✓ | occurrences of one issue, newest first |
+| `get_event`          | `issues:read`     | ✓ | ✓ | ✓ | frames, raw stack, tags, extra, breadcrumbs, user |
+| `search_events`      | `issues:read`     | ✓ | ✓ | ✓ | raw events; `level`, `environment`, `release`, `q`, `issue`, `period` |
+| `get_stats`          | `issues:read`     | ✓ | ✓ | ✓ | totals vs previous period, series, breakdowns; `period` or `from`/`to` |
+| `get_live`           | `issues:read`     | ✓ | ✓ | ✓ | events in the last few minutes |
 | `get_usage`          | `usage:read`      | ✓ | ✓ | ✓ | events / dropped / counts vs. plan limits |
-| `create_project`     | `projects:write`  |   | ✓ | ✓ | returns the public key + snippet |
-| `update_project`     | `projects:write`  |   | ✓ | ✓ | pause tracking, bots, store raw IPs, time zone, allowed hostnames… |
-| `rotate_project_key` | `projects:write`  |   | ✓ | ✓ | old key stops working immediately |
+| `report_error`       | `projects:read`   | ✓ | ✓ | ✓ | posts an event to `/ingest` with the project's public key |
+| `create_project`     | `projects:write`  |   | ✓ | ✓ | returns the public key + SDK tag |
+| `update_project`     | `projects:write`  |   | ✓ | ✓ | pause ingest, store raw IPs, time zone, allowed origins… |
+| `rotate_public_key`  | `projects:write`  |   | ✓ | ✓ | old key stops working immediately |
+| `update_issue`       | `issues:write`    |   | ✓ | ✓ | `status`: `resolved`, `ignored`, `open` (reopen) |
+| `bulk_update_issues` | `issues:write`    |   | ✓ | ✓ | same status on ≤ 100 issues |
 | `delete_project`     | `projects:delete` |   |   | ✓ | **confirmation required** |
-| `purge_events`       | `events:delete`   |   |   | ✓ | **confirmation required**; optional `before` date |
-| `get_audit_log`      | `audit:read`      |   |   | ✓ | |
+| `purge_events`       | `events:delete`   |   |   | ✓ | **confirmation required**; deletes every event and issue |
+| `get_audit_log`      | `audit:read`      |   |   | ✓ | `action`, `actor_type`, `outcome`, `since`, paging |
 
 Roles are defined once in
 [`packages/shared/api_key_roles.json`](../shared/api_key_roles.json) and
 shared by the API, the dashboard and this server.
 
 Also exposed: resources `oops://projects` and `oops://projects/{id}/summary`,
-and the `weekly_report` prompt (last 7 days vs the week before: trend, daily
-shape, sources, pages, devices, things to look into — read-only).
+and the **`triage`** prompt (`project`, `period?`): summarise the open issues
+of a project — new vs regressed, most users affected, by environment and
+release — and propose what to fix, resolve or ignore first. It only proposes;
+status changes still go through `update_issue` after the user agrees.
+
+### Reporting from an agent
+
+`report_error` lets the agent file its own failures: it reads the project to
+get its public key and posts one event to `POST /api/ingest` with
+`X-Project-Key`, `platform: "agent"` (override with `python`, `node`, …) and
+`sdk: "oops-errors-mcp/<version>"`. Give `type` and/or `message`, optionally
+`stack` (parsed server-side), `frames`, `url`, `release`, `environment`,
+`user`, `tags`, `extra`, `breadcrumbs` and a `fingerprint` to control
+grouping. The result is the event id and the issue `#number`, or `ok: false`
+with a drop reason (`paused`, `origin`, `limit`) — never an error on the
+agent's side.
 
 ## Human approval for destructive actions
 
@@ -107,9 +127,9 @@ model's say-so alone:
   refuses with `confirmation_required` until the model calls it again with
   `confirm: true` — which it can only honestly do after asking the user.
 
-`rotate_project_key` is not gated but is marked destructive: every snippet
-using the previous key stops working the moment it runs. Prefer
-`update_project` with `collect_enabled: false` over deleting a project.
+`rotate_public_key` is not gated but is marked destructive: every SDK tag and
+server-side reporter using the previous key stops working the moment it runs.
+Prefer `update_project` with `ingest_enabled: false` over deleting a project.
 
 ## Audit trail
 
@@ -126,12 +146,13 @@ Two complementary logs:
 
 - **Structured outputs.** Every tool declares an `outputSchema` and returns
   `structuredContent`; hosts can validate and chain results without parsing
-  prose. Objects mirroring API responses allow extra fields, so an additive
-  API change never breaks client-side validation.
+  prose. The text part is a compact summary (one line per issue or event, the
+  stack of the latest event top-first). Objects mirroring API responses allow
+  extra fields, so an additive API change never breaks client-side validation.
 - **Errors are results.** API errors come back as `isError` with the stable
   code (`limit_reached` + `which`, `key_taken`, `invalid_timezone`,
-  `invalid_origins`, `insufficient_scope`, `not_found`…) so the model can
-  recover instead of crashing.
+  `invalid_origins`, `insufficient_scope`, `not_found`, `invalid_issue_ref`…)
+  so the model can recover instead of crashing.
 - **stdio hygiene.** stdout is the protocol channel; all logging goes to stderr.
 - **Stateless HTTP.** Each request builds a server bound to the caller's key;
   tenants can never share state. The `/apikeys/me` lookup is cached 60 s per key.

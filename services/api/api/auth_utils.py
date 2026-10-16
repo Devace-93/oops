@@ -8,11 +8,10 @@ Three ways to authenticate against this API:
 2. **Management API** — a long-lived API key (``oops_live_…``) in the
    ``X-API-Key`` header (or as a bearer token), looked up by its sha256 hash
    in ``api_keys``.
-3. **Collect API** — a project public key (``oops_pub_…``) in the
+3. **Ingest API** — a project public key (``oops_pub_…``) in the
    ``X-Project-Key`` header, as a bearer token, or as the ``project_key``
-   field (or ``k``) of the body / query string (so the pixel can be a plain
-   ``<img>``). It
-   identifies exactly one project, has no role and cannot call anything else.
+   field (or ``k``) of the body / query string. It identifies exactly one
+   project, has no role and cannot call anything else.
 
 The ``@require_auth`` / ``@require_api_key`` / ``@require_project_key``
 decorators put the resolved ids on ``flask.g`` so views can stay terse.
@@ -260,7 +259,7 @@ def presented_project_key() -> str:
 
 
 def require_project_key(view):
-    """Require a valid project public key (collect API).
+    """Require a valid project public key (ingest API).
 
     Sets ``g.project_id`` and ``g.account_id``. No scopes: a public key cannot
     call the management API at all. An unknown or rotated key is 401

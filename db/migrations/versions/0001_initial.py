@@ -6,7 +6,7 @@ created otherwise (databases that only ever ran Alembic).
 
 Revision ID: 0001
 Revises:
-Create Date: 2026-10-15 17:00:00
+Create Date: 2026-10-16 12:00:00
 """
 from typing import Sequence, Union
 
@@ -119,8 +119,7 @@ def upgrade() -> None:
     sa.Column('public_key_prefix', sa.String(length=24), nullable=False),
     sa.Column('timezone', sa.String(length=64), server_default='UTC', nullable=False),
     sa.Column('allowed_origins', postgresql.JSONB(astext_type=sa.Text()), server_default='[]', nullable=False),
-    sa.Column('collect_enabled', sa.Boolean(), server_default='true', nullable=False),
-    sa.Column('exclude_bots', sa.Boolean(), server_default='true', nullable=False),
+    sa.Column('ingest_enabled', sa.Boolean(), server_default='true', nullable=False),
     sa.Column('store_ip', sa.Boolean(), server_default='false', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -174,45 +173,87 @@ def upgrade() -> None:
     sa.UniqueConstraint('account_id', 'period_start', name='uq_usage_period')
     )
     _create_index(op.f('ix_usage_counters_account_id'), 'usage_counters', ['account_id'], unique=False)
+    _create_table('issues',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('project_id', sa.UUID(), nullable=False),
+    sa.Column('number', sa.Integer(), nullable=False),
+    sa.Column('fingerprint', sa.String(length=64), nullable=False),
+    sa.Column('title', sa.String(length=500), nullable=False),
+    sa.Column('culprit', sa.String(length=500), nullable=True),
+    sa.Column('type', sa.String(length=200), nullable=True),
+    sa.Column('level', sa.String(length=10), server_default='error', nullable=False),
+    sa.Column('status', sa.String(length=10), server_default='open', nullable=False),
+    sa.Column('first_seen', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('last_seen', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('regressed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('event_count', sa.Integer(), server_default='0', nullable=False),
+    sa.Column('user_count', sa.Integer(), server_default='0', nullable=False),
+    sa.Column('environments', postgresql.JSONB(astext_type=sa.Text()), server_default='[]', nullable=False),
+    sa.Column('releases', postgresql.JSONB(astext_type=sa.Text()), server_default='[]', nullable=False),
+    sa.Column('latest_event_id', sa.BigInteger(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('project_id', 'fingerprint', name='uq_issue_fingerprint'),
+    sa.UniqueConstraint('project_id', 'number', name='uq_issue_number')
+    )
+    _create_index('ix_issues_project_status_last_seen', 'issues', ['project_id', 'status', 'last_seen'], unique=False)
+    _create_index('ix_issues_project_last_seen', 'issues', ['project_id', 'last_seen'], unique=False)
+    _create_table('issue_users',
+    sa.Column('issue_id', sa.UUID(), nullable=False),
+    sa.Column('user_hash', sa.String(length=64), nullable=False),
+    sa.Column('first_seen', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['issue_id'], ['issues.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('issue_id', 'user_hash')
+    )
     _create_table('events',
     sa.Column('id', sa.BigInteger(), sa.Identity(always=False), nullable=False),
     sa.Column('project_id', sa.UUID(), nullable=False),
+    sa.Column('issue_id', sa.UUID(), nullable=False),
     sa.Column('ts', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('kind', sa.String(length=10), server_default='pageview', nullable=False),
-    sa.Column('name', sa.String(length=60), nullable=True),
+    sa.Column('level', sa.String(length=10), server_default='error', nullable=False),
+    sa.Column('type', sa.String(length=200), nullable=True),
+    sa.Column('message', sa.Text(), server_default='', nullable=False),
+    sa.Column('frames', postgresql.JSONB(astext_type=sa.Text()), server_default='[]', nullable=False),
+    sa.Column('stack_raw', sa.Text(), nullable=True),
+    sa.Column('url', sa.String(length=2048), nullable=True),
+    sa.Column('path', sa.String(length=2048), nullable=True),
     sa.Column('hostname', sa.String(length=255), nullable=True),
-    sa.Column('path', sa.String(length=2048), server_default='/', nullable=False),
-    sa.Column('title', sa.String(length=200), nullable=True),
-    sa.Column('referrer', sa.String(length=2048), nullable=True),
-    sa.Column('referrer_host', sa.String(length=255), nullable=True),
-    sa.Column('utm_source', sa.String(length=100), nullable=True),
-    sa.Column('utm_medium', sa.String(length=100), nullable=True),
-    sa.Column('utm_campaign', sa.String(length=100), nullable=True),
-    sa.Column('country', sa.String(length=2), nullable=True),
-    sa.Column('region', sa.String(length=100), nullable=True),
-    sa.Column('city', sa.String(length=100), nullable=True),
-    sa.Column('device', sa.String(length=10), nullable=True),
+    sa.Column('release', sa.String(length=100), nullable=True),
+    sa.Column('environment', sa.String(length=40), server_default='production', nullable=False),
+    sa.Column('platform', sa.String(length=30), nullable=True),
+    sa.Column('sdk', sa.String(length=60), nullable=True),
+    sa.Column('user', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('user_hash', sa.String(length=64), nullable=False),
     sa.Column('browser', sa.String(length=40), nullable=True),
     sa.Column('os', sa.String(length=40), nullable=True),
-    sa.Column('screen_w', sa.Integer(), nullable=True),
-    sa.Column('screen_h', sa.Integer(), nullable=True),
-    sa.Column('lang', sa.String(length=16), nullable=True),
-    sa.Column('visitor_hash', sa.String(length=64), nullable=False),
-    sa.Column('ip_hash', sa.String(length=64), nullable=True),
+    sa.Column('device', sa.String(length=10), nullable=True),
     sa.Column('ip', sa.String(length=45), nullable=True),
-    sa.Column('source', sa.String(length=10), server_default='script', nullable=False),
-    sa.Column('props', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
+    sa.Column('ip_hash', sa.String(length=64), nullable=True),
+    sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
+    sa.Column('extra', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
+    sa.Column('breadcrumbs', postgresql.JSONB(astext_type=sa.Text()), server_default='[]', nullable=False),
+    sa.Column('source', sa.String(length=10), server_default='api', nullable=False),
+    sa.ForeignKeyConstraint(['issue_id'], ['issues.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     _create_index('ix_events_project_ts', 'events', ['project_id', 'ts'], unique=False)
-    _create_index('ix_events_project_kind_ts', 'events', ['project_id', 'kind', 'ts'], unique=False)
+    _create_index('ix_events_issue_ts', 'events', ['issue_id', 'ts'], unique=False)
+    _create_index('ix_events_project_level_ts', 'events', ['project_id', 'level', 'ts'], unique=False)
 
 
 def downgrade() -> None:
-    op.drop_index('ix_events_project_kind_ts', table_name='events')
+    op.drop_index('ix_events_project_level_ts', table_name='events')
+    op.drop_index('ix_events_issue_ts', table_name='events')
     op.drop_index('ix_events_project_ts', table_name='events')
     op.drop_table('events')
+    op.drop_table('issue_users')
+    op.drop_index('ix_issues_project_last_seen', table_name='issues')
+    op.drop_index('ix_issues_project_status_last_seen', table_name='issues')
+    op.drop_table('issues')
     op.drop_index(op.f('ix_usage_counters_account_id'), table_name='usage_counters')
     op.drop_table('usage_counters')
     op.drop_index(op.f('ix_subscriptions_rc_app_user_id'), table_name='subscriptions')

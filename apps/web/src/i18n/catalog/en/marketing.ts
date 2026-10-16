@@ -7,75 +7,77 @@
  */
 export const marketing = {
   // Landing — hero
-  "landing.badge": "Open source · MIT · Self-hostable · No cookies",
-  "landing.heroTitle": "Know who visits your apps,",
-  "landing.heroTitleAccent": "without tracking anyone",
-  "landing.heroBody":
-    "oops counts page views and visitors for every project you register: top pages, referrers, countries and cities, devices, browsers and custom events — from one script tag, a pixel or an API call. No cookies, no stored IP addresses, nothing to put in a consent banner.",
+  "landing.badgeErrors": "Open source · MIT · Self-hostable · 4 KB SDK",
+  "landing.heroTitleErrors": "Catch and fix the errors",
+  "landing.heroTitleAccentErrors": "your apps throw",
+  "landing.heroBodyErrors":
+    "oops collects the errors from your browsers, servers, scripts and AI agents, groups them into issues, and tells you how many users each one affects, in which release and in which environment — with the stack trace and the clicks that led there. Resolve them from the dashboard, the API or an MCP client.",
   "landing.getStarted": "Get started free",
   "landing.whyFree": "Why it's free right now",
   "landing.seePricing": "See pricing",
   "landing.readDocs": "Read the docs",
   "landing.earlyNote": "Early access: every account gets full access, free. Plans come later, with notice.",
-  "landing.freeNote": "Free plan: {projects} projects & {events} events / month. No card required.",
+  "landing.freeNoteErrors": "Free plan: {projects} projects & {events} error events / month. No card required.",
 
   // Landing — three paths
-  "landing.pathsTitle": "Three ways to count",
-  "landing.pathsBody": "Pick the one that fits each app. They all land in the same dashboard.",
-  "landing.pathScriptTitle": "One script tag",
-  "landing.pathScriptBody":
-    "Under 3 KB, no dependencies. Counts every page view, follows single-page-app route changes, and exposes oops.track() for custom events. Works in Qwik, Astro, React, jQuery pages and Phaser games alike.",
-  "landing.pathPixelTitle": "Tracking pixel",
-  "landing.pathPixelBody":
-    "A 1×1 image for places where JavaScript can't run: emails, READMEs, documentation hosted elsewhere. The URL says which page or event it stands for.",
-  "landing.pathApiTitle": "Collect API",
-  "landing.pathApiBody":
-    "A single POST with the project's public key, from your backend, a CLI, a game server or a cron job. Perfect for apps without a DOM.",
+  "landing.pathsTitleErrors": "Three ways to report",
+  "landing.pathsBodyErrors": "Pick the one that fits each app. They all land in the same inbox.",
+  "landing.pathSdkTitle": "Browser SDK",
+  "landing.pathSdkBody":
+    "One script tag, under 4 KB, no dependencies. Catches uncaught errors and unhandled promise rejections, records clicks, route changes and failed requests as breadcrumbs, and exposes oops.capture() for the errors you catch yourself. Never throws into your page.",
+  "landing.pathIngestTitle": "Ingest API",
+  "landing.pathIngestBody":
+    "A single POST with the project's public key, from Python, Node, Go, a CLI or a cron job. Send frames or the raw stack string — V8, Firefox and Python tracebacks are parsed server-side. Always answers 202: a failing app never gets a second error back.",
+  "landing.pathAgentTitle": "AI agents via MCP",
+  "landing.pathAgentBody":
+    "The MCP server lets Claude Code, Claude Desktop, Cursor or any MCP host read, triage and resolve issues — and report an agent's own failures into a project with report_error.",
 
   // Landing — how it works
   "landing.howTitle": "How it works",
   "landing.step1Title": "1. Create a project",
-  "landing.step1Body": "One project per site or app. You get a public key for the script, the pixel and the API, and you pick its time zone.",
-  "landing.step2Title": "2. Paste the snippet",
-  "landing.step2Body": "Copy it from the project settings into your layout. The first page views show up within seconds.",
-  "landing.step3Title": "3. Read the dashboard",
-  "landing.step3Body": "Pick a range, click any page, country or device to filter everything by it, watch the live counter, or let an AI agent read the numbers through MCP.",
+  "landing.step1BodyErrors": "One project per app, site or service. You get a public key for the SDK and the ingest API, and you pick its time zone.",
+  "landing.step2TitleErrors": "2. Report an error",
+  "landing.step2BodyErrors": "Paste the script tag, or POST one JSON object from your backend. The server scrubs secrets, parses the stack and groups the event into an issue by fingerprint.",
+  "landing.step3TitleErrors": "3. Triage the inbox",
+  "landing.step3BodyErrors": "Open issues sorted by last seen, with events, affected users, environments and releases. Resolve, ignore, reopen — one by one or in bulk, from the dashboard, the API or an AI agent.",
 
   // Landing — what you see
-  "landing.seeTitle": "Everything you want to know, nothing you don't",
-  "landing.seeBody": "The dashboard answers the questions people actually ask about a site, and stops there.",
-  "landing.seeWhereTitle": "Where from.",
-  "landing.seeWhereBody": "Referrers, UTM source / medium / campaign, countries, regions and cities.",
-  "landing.seeWhoTitle": "On what.",
-  "landing.seeWhoBody": "Desktop, mobile or tablet; browser and operating system; screen size and language.",
-  "landing.seeWhatTitle": "Doing what.",
-  "landing.seeWhatBody": "Top pages, entry paths, and the custom events you send (signups, purchases, clicks) with their properties.",
-  "landing.seeLiveTitle": "Right now.",
-  "landing.seeLiveBody": "Visitors in the last five minutes and the pages they are on.",
+  "landing.seeTitleErrors": "Everything you need to fix it, nothing you don't",
+  "landing.seeBodyErrors": "The dashboard answers the questions you actually ask when something breaks, and stops there.",
+  "landing.seeGroupTitle": "Grouped by fingerprint.",
+  "landing.seeGroupBody": "'User 42 not found' and 'User 43 not found' are one issue; the same error from another function is another. Send your own fingerprint to override.",
+  "landing.seeUsersTitle": "Affected users.",
+  "landing.seeUsersBody": "Not just how many times, but how many people — by the user id you send, or a daily cookie-less hash when you don't.",
+  "landing.seeReleasesTitle": "Releases and environments.",
+  "landing.seeReleasesBody": "Every issue lists where it happens. Resolved issues reopen on the next event and get a regressed badge.",
+  "landing.seeCrumbsTitle": "Breadcrumbs.",
+  "landing.seeCrumbsBody": "The last 30 clicks, route changes, failed requests and console messages before the error, with the stack frames and tags next to them.",
 
   // Landing — privacy
-  "landing.privacyTitle": "Privacy-friendly by construction",
-  "landing.privacyBody":
-    "The tracker sets no cookie and writes nothing to the browser. The server hashes each visitor's IP address with a salt that changes every day, keeps only the derived country, region and city, and throws the user agent away once device, browser and OS are known.",
-  "landing.privacy1": "No cookies, no localStorage, no fingerprinting across sites or days",
-  "landing.privacy2": "Raw IP addresses are not stored by default — only a daily salted hash (a per-project switch keeps them if you need to)",
-  "landing.privacy3": "Query strings are dropped from page URLs (except UTM tags), so tokens and emails never reach the dashboard",
-  "landing.privacy4": "Optional Do Not Track support, and bots are filtered out",
-  "landing.apiNote": "Public keys can only send hits. They can never read anything.",
+  "landing.privacyTitleErrors": "Careful with data by construction",
+  "landing.privacyBodyErrors":
+    "Error payloads carry whatever your code had in scope, so the server cleans them before storage: secret-looking keys are filtered, query strings and fragments are dropped from URLs, the user agent is reduced to browser, OS and device and thrown away, and IP addresses are hashed unless a project opts in to keep them.",
+  "landing.privacyScrub": "Keys named password, token, secret, authorization, cookie, api_key, card, cvv or ssn are replaced by [Filtered] in tags, extra, breadcrumbs and user objects",
+  "landing.privacyUa": "No raw user agents stored — only browser, OS and device",
+  "landing.privacyIp": "Raw IP addresses are not stored by default — only a daily salted hash (a per-project switch keeps them if you need to)",
+  "landing.privacyCookies": "The SDK sets no cookie and writes nothing to the browser",
+  "landing.apiNoteErrors": "Public keys can only report. They can never read anything, and they can be rotated at any time.",
   "landing.panelRequest": "Request",
   "landing.panelResponse": "Response",
 
   // Landing — MCP section
   "landing.mcpBadge": "Model Context Protocol",
-  "landing.mcpTitle": "Ask your AI agent how the site is doing",
+  "landing.mcpTitleErrors": "Let your AI agent triage the inbox",
   "landing.mcpIntro": "oops ships an MCP server. Connect it to Claude Code, Claude Desktop, Cursor or any MCP host and ask things like",
-  "landing.mcpExample1": "“how did traffic to the docs change this week?”",
+  "landing.mcpExampleRelease": "“what broke after the 1.4 release?”",
   "landing.mcpOr": "or",
-  "landing.mcpExample2": "“which countries visit the pricing page most?”",
+  "landing.mcpExampleTriage": "“triage the checkout errors and resolve the ones already fixed”",
+  "landing.mcpTriageTitle": "A triage prompt.",
+  "landing.mcpTriageBody": "The server ships a triage prompt that summarises a project's open issues — new vs regressed, most users affected, by environment — and proposes what to fix, resolve or ignore first.",
   "landing.mcpBullet1Title": "Role-scoped keys.",
   "landing.mcpBullet1Body": "A viewer key never even sees the delete tools; editor and admin unlock more. Enforced by the API too.",
   "landing.mcpBullet2Title": "Human in the loop.",
-  "landing.mcpBullet2Body": "Destructive actions (delete a project, purge its events) ask you to confirm before anything happens.",
+  "landing.mcpBullet2BodyErrors": "Destructive actions (delete a project, purge its events and issues) ask you to confirm before anything happens.",
   "landing.mcpBullet3Title": "Audit trail.",
   "landing.mcpBullet3Body": "Every change and every refused call is logged, server-side and agent-side.",
   "landing.mcpBullet4Title": "Local or remote.",
@@ -91,12 +93,12 @@ export const marketing = {
 
   // Landing — self-host callout + closing CTA
   "landing.selfhostTitle": "Self-host it (MIT, open source)",
-  "landing.selfhostBody1":
-    "The entire stack — Flask API, tracker, MCP server and this Qwik app — is MIT-licensed. Run it on your own VPS with one",
+  "landing.selfhostBody1Errors":
+    "The entire stack — Flask API, browser SDK, MCP server and this Qwik app — is MIT-licensed. Run it on your own VPS with one",
   "landing.selfhostBody2": ". No billing code, no limits beyond what you configure.",
   "landing.viewGithub": "View on GitHub",
-  "landing.ctaTitle": "See your first visitor in a minute",
-  "landing.ctaBody": "Create a project, paste one script tag and watch the live counter move.",
+  "landing.ctaTitleErrors": "See your first error in a minute",
+  "landing.ctaBodyErrors": "Create a project, paste one script tag and throw something on purpose. It lands in the inbox in a second.",
 
   // Blog (chrome only)
   "blog.title": "Blog",
@@ -117,7 +119,7 @@ export const marketing = {
   "info.plannedPricingTitle": "Planned pricing",
   "info.plannedPricingBody": "The tiers we intend to introduce after early access.",
   "info.docsTitle": "Docs",
-  "info.docsBody": "Tracker install guide, pixel, collect API, stats API reference and MCP setup.",
+  "info.docsBodyErrors": "Browser SDK guide, ingest API fields, grouping rules, REST and MCP reference, limits.",
   "info.termsTitle": "Terms",
   "info.termsBody": "Terms of service (coming soon).",
   "info.privacyTitle": "Privacy",
@@ -128,18 +130,18 @@ export const marketing = {
   // Pricing page
   "pricing.title": "Simple, honest pricing",
   "pricing.titlePlanned": "Planned pricing",
-  "pricing.intro":
-    "Start free. Upgrade when you need more projects, more events per month or longer retention. Self-host for unlimited everything.",
+  "pricing.introErrors":
+    "Start free. Upgrade when you need more projects, more error events per month or longer retention. Self-host for unlimited everything.",
   "pricing.introPlanned": "These are the tiers we intend to introduce after early access. Nothing here applies yet.",
   "pricing.earlyTitle": "Right now every account has full access, free.",
-  "pricing.earlyBody":
-    "Unlimited projects, events and retention, the API and the MCP server. When plans arrive we will announce it on the blog and by email before any limit applies to an existing account. Prices and limits below may still change.",
+  "pricing.earlyBodyErrors":
+    "Unlimited projects, error events and retention, the API and the MCP server. When plans arrive we will announce it on the blog and by email before any limit applies to an existing account. Prices and limits below may still change.",
   "pricing.earlyCta": "Read what paid plans will include",
   "pricing.enterpriseTitle": "Need custom limits, SSO or an SLA?",
   "pricing.enterpriseBody": "Enterprise plans are tailored to your team.",
   "pricing.contactUs": "Contact us",
-  "pricing.footnote":
-    "All prices in USD. Annual billing saves ~20%. Project and key counts are hard limits; events over the monthly budget are counted but not stored, and your site never sees an error. Events older than the retention window are pruned.",
+  "pricing.footnoteErrors":
+    "All prices in USD. Annual billing saves ~20%. Project and key counts are hard limits; error events over the monthly budget are counted but not stored, and your app never gets an error back. Events older than the retention window are pruned.",
   "pricing.footnoteEarly": "None of this is enforced during early access.",
 
   // Pricing table (plan labels come from packages/shared/plan_limits.json)
@@ -162,69 +164,83 @@ export const marketing = {
 
   // Docs
   "docs.title": "Docs",
-  "docs.intro":
-    "How to put oops in your app, send hits from anywhere, and read the numbers through the REST API or an AI agent. The full contract — every endpoint, object and error — lives in the repository.",
+  "docs.introErrors":
+    "How to put oops in your app, report errors from anywhere, and read or triage the issues through the REST API or an AI agent. The full contract — every endpoint, object and rule — lives in the repository.",
   "docs.fullContract": "Read the full contract (CONTRACT.md)",
   "docs.baseUrl": "Base URL",
-  "docs.trackerTitle": "Tracker script",
-  "docs.trackerBody":
-    "A zero-dependency script under 3 KB served from this host. Add it once in your layout; it sends one hit per page view and per single-page-app route change, with no cookies and nothing stored in the browser.",
-  "docs.trackerAttrsTitle": "Attributes (defaults shown)",
+  "docs.sdkTitle": "Browser SDK",
+  "docs.sdkBody":
+    "A zero-dependency script under 4 KB gzipped, served from this host at /o.js (also /o/v1.js). Add it once in your layout: it captures window.onerror and unhandledrejection, keeps the last 30 breadcrumbs (clicks, SPA route changes, failed fetch / XHR calls) and posts events with sendBeacon. It never throws into your page, drops identical events within 2 s, sends at most 30 events per minute and skips localhost pages unless told otherwise.",
+  "docs.sdkAttrsTitle": "Attributes (defaults shown)",
   "docs.attrKey": "the project's public key (required).",
-  "docs.attrSpa": "hook the History API and send a page view on every route change. Set to false to call oops.pageview() yourself.",
-  "docs.attrHash": "hash routing: keep the #fragment in the URL and listen to hashchange.",
-  "docs.attrDnt": "honour the browser's Do Not Track signal.",
-  "docs.attrLocal": "also track on localhost, raw IPs, file: and *.local (ignored by default).",
-  "docs.attrApi": "override the collect endpoint (self-hosted instances behind another host).",
-  "docs.trackerJsTitle": "JavaScript API",
-  "docs.trackerJsBody":
-    "window.oops exposes track(name, props) for custom events and pageview() for manual page views. Calls queued before the script loads are replayed.",
-  "docs.trackerDeclarative": "Clicks on elements with data-oops-event are tracked automatically, with optional JSON props:",
-  "docs.trackerWhat":
-    "What is sent: the page URL without its query string (UTM tags are read and then dropped), the referrer, the title, the screen size and the browser language. Device, browser, OS and location are derived on the server from the request and never stored raw.",
-  "docs.pixelTitle": "Tracking pixel",
-  "docs.pixelBody":
-    "For places where no JavaScript runs — newsletters, README files, documentation on another host. The image is a 43-byte transparent GIF, never cached. Pass the page as u and, optionally, an event name as n.",
-  "docs.collectTitle": "Collect API",
-  "docs.collectBody":
-    "POST /api/collect with the project's public key in the X-Project-Key header (or a k field). JSON, form-encoded and text/plain bodies are accepted, CORS is open, and the answer is always 202 so a tracked site never sees an error.",
-  "docs.collectField1": "n: event name (defaults to pageview). 1-60 letters, digits, spaces, _ . : / or -.",
-  "docs.collectField2": "u: the page URL or path (required for anything meaningful). Query strings are only read for UTM tags.",
-  "docs.collectField3": "r: referrer URL; t: page title (≤ 200); l: language (≤ 16); w / h: screen size.",
-  "docs.collectField4": "p: a JSON object of properties for custom events (≤ 2 KB).",
-  "docs.collectField5": "s: source — script (default), pixel or api. Device, browser, OS and location come from the request's own headers and address.",
-  "docs.collectResponses":
-    "The body says what happened: { ok: true } when stored, or { ok: false, reason } with reason = paused (tracking off for the project), origin (hostname not in the allowed list), bot (crawler or headless browser) or limit (over the monthly budget — counted, not stored).",
+  "docs.attrEnvRelease": "environment and release labels stamped on every event (environment defaults to production).",
+  "docs.attrConsole": "also capture console.error calls as events, and console.warn / console.error as breadcrumbs.",
+  "docs.attrLocalErrors": "also report from localhost, raw IPs and file: pages (skipped by default).",
+  "docs.attrSample": "fraction of error events sent (0–1). Captured messages and explicit capture() calls always go through.",
+  "docs.attrUser": "initial user as JSON ({ id, email, name }); same as calling oops.setUser().",
+  "docs.attrApiErrors": "override the ingest endpoint (self-hosted instances behind another host).",
+  "docs.sdkJsTitle": "JavaScript API",
+  "docs.sdkJsBody":
+    "window.oops exposes capture, message, setUser, setTag / setTags, setContext, breadcrumb and flush. Calls queued in window.oops.q before the script loads are replayed.",
+  "docs.sdkWhat":
+    "What is sent: type, message, the stack (parsed into frames), level, URL without its query string, release, environment, platform, the user you set, tags, extra and the breadcrumb buffer. Browser, OS and device are derived on the server from the request and the user agent is discarded.",
+  "docs.ingestTitle": "Ingest API",
+  "docs.ingestBody":
+    "POST /api/ingest (or /api/ingest/event) with the project's public key in the X-Project-Key header or a k field. JSON, form-encoded and text/plain bodies are accepted, CORS is open, bodies are capped at 64 KB, and the answer is 202 whenever the key is valid — paused projects, blocked origins and exceeded budgets return ok:false rather than an error, so a failing app never fails a second time.",
+  "docs.ingestField1": "type and message: the exception class / error name and its message. At least one is required.",
+  "docs.ingestField2": "level: fatal | error | warning | info (default error). environment (default production) and release are free-text labels used as filters.",
+  "docs.ingestField3": "frames (top of the stack first; filename, function, lineno, colno, in_app) or stack: a raw string parsed server-side (V8, Firefox / Safari and Python traceback formats).",
+  "docs.ingestField4": "url (query and fragment dropped), platform (javascript, python, node, …), sdk, user ({ id, email, name }), tags (≤ 20 pairs), extra (≤ 8 KB JSON).",
+  "docs.ingestField5": "breadcrumbs: up to 30 of { ts, category, message, level, data }; the last 30 are kept.",
+  "docs.ingestField6": "fingerprint: up to 5 strings that fully replace the automatic grouping. ts: optional client timestamp (server time if missing or more than 5 minutes off).",
+  "docs.ingestResponsesTitle": "Responses",
+  "docs.ingestResponses":
+    "Stored events return the event id and the issue they landed in. Dropped events say why: paused (ingest switched off for the project), origin (allowed hostnames set and the page / Origin host is not in them) or limit (over the monthly budget — counted, not stored). Malformed payloads are 400, a bad key is 401.",
+  "docs.ingestBatchTitle": "Batches",
+  "docs.groupingTitle": "Grouping rules",
+  "docs.groupingBody": "Every event lands in exactly one issue, keyed by a fingerprint:",
+  "docs.groupingRule1": "If the event carries a fingerprint array, that wins — use it to group by business meaning (['checkout', 'pay-failed']).",
+  "docs.groupingRule2": "Otherwise the fingerprint is type + normalised message + top in-app frame (filename without query string + function). Normalisation replaces runs of digits, hex blobs ≥ 8 chars, UUIDs and quoted strings with placeholders and truncates to 200 chars.",
+  "docs.groupingRule3": "A resolved issue that receives a new event reopens and is marked regressed. An ignored issue stays ignored but keeps counting.",
+  "docs.groupingRule4": "Affected users = distinct user hashes: your user.id (hashed per project) when you send one, otherwise a daily cookie-less hash of IP and user agent.",
   "docs.authTitle": "Authentication",
   "docs.authBody": "Three kinds of credentials, each for one job:",
   "docs.authDashboard": "Dashboard sessions: JWT bearer tokens issued by /auth/login. Hold every scope.",
-  "docs.authApiKey": "Management API: API keys with a role (viewer / editor / admin). Header X-API-Key: oops_live_… (or Authorization: Bearer).",
-  "docs.authPublicKey":
-    "Collect API, tracker and pixel: project public keys. Header X-Project-Key: oops_pub_… (or the k field). They identify one project and can only send hits.",
+  "docs.authApiKey": "Management API and MCP: API keys with a role (viewer / editor / admin). Header X-API-Key: oops_live_… (or Authorization: Bearer).",
+  "docs.authPublicKeyErrors":
+    "Ingest API and SDK: project public keys. Header X-Project-Key: oops_pub_… (or the k field). They identify one project, can only report, and can be rotated at any time.",
   "docs.projectsTitle": "Projects",
-  "docs.projectsBody":
-    "A project is one site or app. It owns a public key, a time zone (used to bucket days), an optional list of allowed hostnames, and the collect / bot switches.",
-  "docs.statsTitle": "Stats",
-  "docs.statsBody":
-    "Ranges are inclusive local dates in the tz parameter (default: the project's zone), as period=today|yesterday|7d|30d|90d|12mo or from/to. Any dimension can be passed as a filter (e.g. country=ES&device=mobile) and everything in the answer is scoped to it. Visitors are counted with a daily hash, so across several days they are daily uniques, summed.",
+  "docs.projectsBodyErrors":
+    "A project is one app, site or service. It owns a public key, a time zone (used to bucket days), an optional list of allowed hostnames, the ingest switch and the store-IP switch.",
+  "docs.issuesTitle": "Issues and events",
+  "docs.issuesBody":
+    "Issues are paged (per_page ≤ 100) and default to the open ones seen in the last 30 days, most recent first. An issue is addressed by its uuid or its per-project number. Bulk updates take up to 100 ids. Events are the raw occurrences, newest first, across one issue or the whole project.",
+  "docs.statsTitle": "Stats, usage and audit",
+  "docs.statsBodyErrors":
+    "period=today|yesterday|24h|7d|30d|90d|12mo or from/to (dates in the project time zone); interval hour | day | month is chosen automatically. level, environment and release filter everything in the answer: totals and the previous period of the same length, the time series, and the top-10 breakdowns.",
   "docs.dimensionsTitle": "Dimensions",
-  "docs.dimensionsBody": "Usable as breakdown (by=) and as filters on every stats and events endpoint. referrer=(direct) selects hits with no referrer.",
-  "docs.errorsTitle": "Errors & limits",
-  "docs.errorsBody":
-    "Errors are JSON: { \"error\": { \"code\", \"message\" } }. Creating past a plan limit answers 402 limit_reached with error.which = projects | api_keys. Hits over the monthly event budget are accepted (202) but not stored.",
-  "docs.privacyBody":
-    "Privacy: by default oops stores no raw IP addresses or user agents — only a salted daily hash and the derived device / browser / OS / location fields. A per-project switch (store_ip) keeps the raw address on each hit. Page URLs lose their query string before storage.",
+  "docs.dimensionsBodyErrors": "Returned as breakdowns by GET /stats. level, environment and release are also accepted as filters on the issues, events and stats endpoints.",
+  "docs.limitsTitle": "Errors, limits and privacy",
+  "docs.errorsBodyErrors":
+    "Errors are JSON: { \"error\": { \"code\", \"message\" } }. A missing scope is 403 insufficient_scope. Creating past a plan limit answers 402 limit_reached with error.which = projects | api_keys. Events over the monthly budget are accepted (202) but not stored, and counted as dropped in /account/usage.",
+  "docs.capsBody":
+    "Payload caps: type ≤ 200, message ≤ 4096, frames ≤ 50, stack ≤ 16 KB, tags ≤ 20 pairs (key ≤ 40, value ≤ 200), extra ≤ 8 KB, breadcrumbs ≤ 30 / 8 KB, fingerprint ≤ 5 × 100, environment ≤ 40, release ≤ 100. Request bodies ≤ 64 KB; a batch holds ≤ 20 events.",
+  "docs.plansBody":
+    "Free plan: {projects} projects, {events} events per month and {days} days of retention; events older than the plan's window are pruned, and issues left with no events disappear with them.",
+  "docs.privacyBodyErrors":
+    "Privacy: keys matching password, passwd, secret, token, authorization, cookie, api_key, card, cvv or ssn are replaced by [Filtered] in tags, extra, breadcrumbs and user; bearer tokens and card numbers inside the message too. URLs lose query string and fragment. The user agent is reduced to browser / OS / device and discarded. IPs are hashed with a daily salt unless the project sets store_ip.",
   "docs.mcpTitle": "MCP (AI agents)",
-  "docs.mcpBody":
-    "The MCP server exposes the management API as tools, filtered by the role of the key you connect with. Destructive tools ask for confirmation. A weekly_report prompt walks a model through a project's numbers.",
+  "docs.mcpBodyErrors":
+    "The MCP server (npm oops-errors-mcp, or Streamable HTTP at /mcp) exposes the management API as tools, filtered by the role of the key you connect with and re-checked on every call. Destructive tools ask for confirmation. report_error lets an agent post an event into a project it can see.",
   "docs.mcpLocal": "Local (stdio, npm)",
   "docs.mcpRemote": "Remote (Streamable HTTP)",
-  "docs.mcpTools":
-    "Tools: list_projects, get_project, create_project, update_project, rotate_project_key, delete_project, project_summary, get_stats, get_breakdown, list_events, get_live, purge_events, get_usage, get_audit_log.",
+  "docs.mcpPrompt":
+    "Prompt triage (project, period?): summarises the open issues of a project — new vs regressed, most users affected, by environment — and proposes what to fix, resolve or ignore first.",
   "docs.colMethod": "Method",
   "docs.colPath": "Path",
   "docs.colScope": "Scope",
   "docs.colNotes": "Notes",
+  "docs.colTool": "Tool",
 
   // Sponsors
   "sponsors.title": "Sponsors",
@@ -250,7 +266,7 @@ export const marketing = {
 
   // Site-building curtain
   "building.title": "We're building oops",
-  "building.body":
-    "Privacy-friendly analytics for your apps. The site isn't open yet — but the tracker, the collect API and the MCP server keep answering just fine.",
+  "building.bodyErrors":
+    "Error tracking for your apps. The site isn't open yet — but the SDK, the ingest API and the MCP server keep answering just fine.",
   "building.footer": "oops.3m4.net · coming soon",
 } as const;

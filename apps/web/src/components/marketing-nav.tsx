@@ -59,7 +59,7 @@ export const MarketingNav = component$(() => {
   const signupVisible = features.signups;
 
   return (
-    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
+    <header role="banner" class="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
       <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Logo />
         <div class="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">

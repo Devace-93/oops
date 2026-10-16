@@ -29,13 +29,15 @@ export const chrome = {
 
   // Project tabs (components/project-nav.tsx)
   "pnav.back": "← All projects",
-  "pnav.overview": "Overview",
+  "pnav.issues": "Issues",
   "pnav.events": "Events",
   "pnav.settings": "Settings",
   "pnav.openSite": "Open site",
   "pnav.paused": "Paused",
   "pnav.live": "Live",
-  "pnav.liveHint": "Received a hit in the last 5 minutes",
+  "pnav.liveEvents": "Received an error event in the last 5 minutes",
+  "pnav.openIssues": "{n} open",
+  "pnav.openIssuesHint": "Open issues",
 
   // Plan/limit formatters (src/lib/plans.ts)
   "plans.unlimited": "Unlimited",

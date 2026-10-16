@@ -2,7 +2,7 @@
 
 Tenancy model: an Account is the billing unit. Registering creates a User, an
 Account, and an owner Membership linking them. Access is a JWT; refresh is an
-opaque token stored hashed in ``refresh_tokens``.
+opaque token stored hashed in ``refresh_tokens`` and rotated on every refresh.
 """
 from __future__ import annotations
 
@@ -147,8 +147,14 @@ def refresh():
         now = datetime.now(timezone.utc)
         if row is None or row.revoked or row.expires_at <= now:
             raise ApiError(401, "invalid_refresh", "Refresh token is invalid or expired.")
-        access = create_access_token(row.user_id, row.account_id)
-    return jsonify({"access_token": access})
+        # Rotation: the presented token is spent, a fresh one is issued.
+        row.revoked = True
+        user = session.get(User, row.user_id)
+        account = session.get(Account, row.account_id)
+        if user is None or account is None:
+            raise ApiError(401, "invalid_refresh", "Refresh token is invalid or expired.")
+        access, refresh_new = _issue_tokens(session, user, account)
+    return jsonify({"access_token": access, "refresh_token": refresh_new})
 
 
 @bp.post("/logout")

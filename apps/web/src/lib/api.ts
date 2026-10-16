@@ -1,5 +1,5 @@
 /**
- * API client for the oops Flask backend.
+ * API client for the oops Flask backend (CONTRACT.md → REST API).
  *
  * - Base URL from VITE_API_URL (fallback "/api" — works behind Caddy).
  * - Attaches the bearer access token.
@@ -14,13 +14,18 @@ import type {
   ApiKey,
   ApiKeyRole,
   AuditEvent,
+  AuditQuery,
   AuthResponse,
-  Breakdown,
-  Dimension,
-  EventKind,
+  Event,
   EventsPage,
+  EventsQuery,
+  Issue,
+  IssueStatus,
+  IssuesPage,
+  IssuesQuery,
   Live,
   MeResponse,
+  Page,
   Project,
   ProjectPatch,
   RolesResponse,
@@ -81,8 +86,11 @@ async function tryRefresh(): Promise<boolean> {
         clearTokens();
         return false;
       }
-      const data = (await res.json()) as { access_token: string };
+      const data = (await res.json()) as { access_token: string; refresh_token?: string };
       setAccessToken(data.access_token);
+      if (data.refresh_token && typeof localStorage !== "undefined") {
+        localStorage.setItem("oops_refresh_token", data.refresh_token);
+      }
       return true;
     } catch {
       return false;
@@ -141,12 +149,11 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 
 function statsParams(query: StatsQuery = {}): Record<string, string | number | undefined> {
   return {
+    // `from` / `to` win over a preset period.
     period: query.from || query.to ? undefined : query.period,
     from: query.from,
     to: query.to,
-    tz: query.tz,
     interval: query.interval,
-    limit: query.limit,
     ...(query.filters ?? {}),
   };
 }
@@ -175,10 +182,16 @@ export const api = {
   features: () => apiFetch<{ features: Record<string, boolean> }>("/features", { auth: false }),
 
   /* ─── Projects ───────────────────────────────────────────────────────── */
-  listProjects: (q = "") => apiFetch<{ items: Project[]; total: number }>(`/projects${qs({ q })}`),
+  listProjects: () => apiFetch<{ items: Project[] }>("/projects"),
 
-  createProject: (input: { name: string; key?: string; description?: string; url?: string; timezone?: string }) =>
-    apiFetch<Project>("/projects", { method: "POST", body: input }),
+  createProject: (input: {
+    name: string;
+    key?: string;
+    description?: string;
+    url?: string;
+    allowed_origins?: string[];
+    timezone?: string;
+  }) => apiFetch<Project>("/projects", { method: "POST", body: input }),
 
   getProject: (id: string) => apiFetch<Project>(p(id)),
 
@@ -187,43 +200,89 @@ export const api = {
 
   deleteProject: (id: string) => apiFetch<void>(p(id), { method: "DELETE" }),
 
-  rotateProjectKey: (id: string) =>
-    apiFetch<{ public_key: string; public_key_prefix: string }>(`${p(id)}/rotate-key`, { method: "POST" }),
+  /** New public key; the old one stops working at once. Returns the Project. */
+  rotateProjectKey: (id: string) => apiFetch<Project>(`${p(id)}/rotate-key`, { method: "POST" }),
 
   projectSummary: (id: string) => apiFetch<Summary>(`${p(id)}/summary`),
 
-  purgeEvents: (id: string, before?: string) =>
-    apiFetch<{ deleted: number; before: string | null }>(`${p(id)}/events${qs({ before })}`, { method: "DELETE" }),
+  /** Purge every event and issue of the project. */
+  purgeEvents: (id: string) =>
+    apiFetch<{ deleted_events: number; deleted_issues: number }>(`${p(id)}/events`, { method: "DELETE" }),
+
+  /* ─── Issues ─────────────────────────────────────────────────────────── */
+  listIssues: (id: string, query: IssuesQuery = {}) =>
+    apiFetch<IssuesPage>(
+      `${p(id)}/issues${qs({
+        status: query.status,
+        level: query.level,
+        environment: query.environment,
+        release: query.release,
+        q: query.q,
+        period: query.period,
+        sort: query.sort,
+        page: query.page,
+        per_page: query.per_page,
+      })}`,
+    ),
+
+  /** `issue` is the uuid or the per-project number. Includes `latest_event`. */
+  getIssue: (id: string, issue: string) => apiFetch<Issue>(`${p(id)}/issues/${enc(issue)}`),
+
+  updateIssue: (id: string, issue: string, status: IssueStatus) =>
+    apiFetch<Issue>(`${p(id)}/issues/${enc(issue)}`, { method: "PATCH", body: { status } }),
+
+  bulkUpdateIssues: (id: string, ids: string[], status: IssueStatus) =>
+    apiFetch<{ updated: number }>(`${p(id)}/issues/bulk`, { method: "POST", body: { ids, status } }),
+
+  /** Occurrences of one issue, newest first. */
+  issueEvents: (id: string, issue: string, page = 1, per_page = 20) =>
+    apiFetch<EventsPage>(`${p(id)}/issues/${enc(issue)}/events${qs({ page, per_page })}`),
+
+  /* ─── Events ─────────────────────────────────────────────────────────── */
+  events: (id: string, query: EventsQuery = {}) =>
+    apiFetch<EventsPage>(
+      `${p(id)}/events${qs({
+        level: query.level,
+        environment: query.environment,
+        release: query.release,
+        q: query.q,
+        issue: query.issue,
+        period: query.period,
+        page: query.page ?? 1,
+        per_page: query.per_page ?? 50,
+      })}`,
+    ),
+
+  getEvent: (id: string, eventId: string) => apiFetch<Event>(`${p(id)}/events/${enc(eventId)}`),
 
   /* ─── Stats ──────────────────────────────────────────────────────────── */
   stats: (id: string, query: StatsQuery = {}) => apiFetch<Stats>(`${p(id)}/stats${qs(statsParams(query))}`),
 
-  breakdown: (id: string, by: Dimension, query: StatsQuery = {}, page = 1, per_page = 50) =>
-    apiFetch<Breakdown>(`${p(id)}/stats/breakdown${qs({ ...statsParams(query), by, page, per_page })}`),
-
-  events: (id: string, query: StatsQuery = {}, opts: { page?: number; per_page?: number; kind?: EventKind | ""; q?: string } = {}) =>
-    apiFetch<EventsPage>(
-      `${p(id)}/events${qs({ ...statsParams(query), page: opts.page ?? 1, per_page: opts.per_page ?? 50, kind: opts.kind, q: opts.q })}`,
-    ),
-
-  live: (id: string) => apiFetch<Live & { project_id: string }>(`${p(id)}/live`),
+  live: (id: string) => apiFetch<Live>(`${p(id)}/live`),
 
   /* ─── Account ────────────────────────────────────────────────────────── */
   usage: () => apiFetch<Usage>("/account/usage"),
 
-  audit: (limit = 50, action = "") =>
-    apiFetch<{ items: AuditEvent[]; limit: number }>(`/account/audit${qs({ limit, action })}`),
+  audit: (query: AuditQuery = {}) =>
+    apiFetch<Page<AuditEvent>>(
+      `/account/audit${qs({
+        action: query.action,
+        actor_type: query.actor_type,
+        outcome: query.outcome,
+        since: query.since,
+        page: query.page ?? 1,
+        per_page: query.per_page ?? 50,
+      })}`,
+    ),
 
-  /* ─── API keys ───────────────────────────────────────────────────────── */
-  listApiKeys: () => apiFetch<ApiKey[]>("/apikeys"),
+  /* ─── API keys (JWT only) ────────────────────────────────────────────── */
+  listApiKeys: () => apiFetch<{ items: ApiKey[] }>("/apikeys"),
 
   apiKeyRoles: () => apiFetch<RolesResponse>("/apikeys/roles", { auth: false }),
 
+  /** The secret is returned exactly once. */
   createApiKey: (name: string, role: ApiKeyRole = "editor") =>
-    apiFetch<{ id: string; key: string; prefix: string; name: string; role: ApiKeyRole }>("/apikeys", {
-      method: "POST",
-      body: { name, role },
-    }),
+    apiFetch<{ key: ApiKey; secret: string }>("/apikeys", { method: "POST", body: { name, role } }),
 
   deleteApiKey: (id: string) => apiFetch<void>(`/apikeys/${enc(id)}`, { method: "DELETE" }),
 

@@ -33,10 +33,10 @@ def public_api_key_func() -> str:
     return request.headers.get("X-API-Key") or _bearer("oops_live_") or get_remote_address()
 
 
-def collect_key_func() -> str:
-    """Rate-limit key for collect routes: (project public key, client IP).
+def ingest_key_func() -> str:
+    """Rate-limit key for ingest routes: (project public key, client IP).
 
-    Bucketing per project AND per address means one noisy visitor cannot
+    Bucketing per project AND per address means one noisy client cannot
     exhaust a project's budget for everyone else, while an attacker rotating
     projects still hits the per-IP default limit.
     """
@@ -46,7 +46,7 @@ def collect_key_func() -> str:
 
 
 # Default limit applies to every route. Management routes additionally apply
-# `config.rate_limit_public_api` and collect routes `config.rate_limit_collect`
+# `config.rate_limit_public_api` and ingest routes `config.rate_limit_ingest`
 # via explicit `@limiter.limit(...)` decorators (which override the default).
 limiter = Limiter(
     key_func=get_remote_address,

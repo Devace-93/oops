@@ -6,8 +6,8 @@
 #
 # Idempotent: re-running keeps an existing .env and just rebuilds/restarts.
 # Prerequisites (already true on the 3m4 box): `edge` network created, 3m4's
-# Caddyfile.prod has the oops.3m4.net block, /opt/3m4/deploy/geoip holds
-# GeoLite2-City.mmdb, DNS A record oops -> this server.
+# Caddyfile.prod has the oops.3m4.net block, DNS A record oops -> this server.
+# No geo database is needed: oops does not look up locations.
 set -euo pipefail
 
 if [ ! -d /opt/oops/.git ]; then
@@ -42,6 +42,8 @@ if [ ! -f .env ]; then
   from3m4 POSTHOG_HOST POSTHOG_HOST
   from3m4 VITE_POSTHOG_KEY VITE_POSTHOG_KEY
   from3m4 VITE_POSTHOG_HOST VITE_POSTHOG_HOST
+  # oops is tracked by metrics (metrics.3m4.net): paste the oops project's public key once it exists.
+  set_var VITE_METRICS_PROJECT_KEY ""
   chmod 600 .env
   echo "✓ .env written"
 fi
@@ -50,7 +52,7 @@ cd deploy
 docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans
 docker image prune -f >/dev/null
 
-# Nightly backup + retention prune (PRODUCTION.md steps 7 and 8), added once.
+# Nightly backup + retention prune (PRODUCTION.md steps 6 and 7), added once.
 CRON=$(crontab -l 2>/dev/null || true)
 grep -q '/opt/oops/deploy/backup.sh' <<<"$CRON" || CRON+=$'\n20 3 * * * /opt/oops/deploy/backup.sh'
 grep -q 'oops-prune.log' <<<"$CRON" || CRON+=$'\n30 4 * * * cd /opt/oops/deploy && docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.prod.yml run --rm migrate python -m dbcore.cli prune-events >> /var/log/oops-prune.log 2>&1'

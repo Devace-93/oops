@@ -1,7 +1,7 @@
 {
   "name": "@oops/web",
   "version": "0.1.0",
-  "description": "oops \u2014 Qwik City frontend (marketing + dashboard) for the oops feature-flag service",
+  "description": "oops \u2014 Qwik City frontend (marketing + dashboard) for the oops error-tracking service",
   "private": true,
   "type": "module",
   "engines": {

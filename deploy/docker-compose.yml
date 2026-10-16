@@ -45,10 +45,6 @@ services:
       redis: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
     expose: ["5000"]
-    volumes:
-      # Optional MaxMind GeoLite2-City.mmdb for country / region / city.
-      # Missing file = hits are stored without location (see .env GEOIP_DB_PATH).
-      - ./geoip:/geoip:ro
     restart: unless-stopped
 
   web:
@@ -65,6 +61,7 @@ services:
         VITE_REVENUECAT_PUBLIC_KEY: ${VITE_REVENUECAT_PUBLIC_KEY:-}
         VITE_BILLING_ENABLED: ${VITE_BILLING_ENABLED:-true}
         VITE_INFO_URL: ${VITE_INFO_URL:-https://info.3m4.net}
+        # oops itself is tracked by metrics (the 3m4 web-analytics app); not part of the oops brand.
         VITE_METRICS_PROJECT_KEY: ${VITE_METRICS_PROJECT_KEY:-}
         VITE_METRICS_TRACKER_URL: ${VITE_METRICS_TRACKER_URL:-https://metrics.3m4.net/m.js}
     env_file: ../.env

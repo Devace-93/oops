@@ -12,25 +12,87 @@ import type { Project, ProjectPatch } from "../../../../../../lib/types";
 const APP_URL = (import.meta.env.VITE_APP_URL || "https://oops.3m4.net").replace(/\/$/, "");
 const API_URL = /^https?:\/\//.test(import.meta.env.VITE_API_URL || "") ? (import.meta.env.VITE_API_URL || "").replace(/\/$/, "") : `${APP_URL}/api`;
 
-type SnippetKind = "script" | "pixel" | "events" | "curl";
+type SnippetKind = "sdk" | "capture" | "curl" | "python" | "node";
 
+/** Install snippets, one per surface (CONTRACT.md → Browser SDK, Ingest). */
 export function snippet(kind: SnippetKind, key: string): string {
   switch (kind) {
-    case "script":
-      return `<script defer src="${APP_URL}/m.js" data-key="${key}"></script>`;
-    case "pixel":
-      return `<img src="${API_URL}/collect/pixel.gif?k=${key}&u=/newsletter/october" alt="" width="1" height="1" style="position:absolute;left:-9999px">`;
-    case "events":
-      return `// after the script tag has loaded
-oops.track("signup", { plan: "pro" });
+    case "sdk":
+      return `<script defer src="${APP_URL}/o.js"
+        data-key="${key}"
+        data-env="production"
+        data-release="1.4.2"></script>`;
+    case "capture":
+      return `// Uncaught errors and unhandled promise rejections are reported automatically.
+// Report a caught error yourself, with context:
+try {
+  await checkout(cart);
+} catch (err) {
+  oops.capture(err, { level: "error", tags: { page: "checkout" }, extra: { items: cart.length } });
+}
 
-// or declaratively, no JavaScript needed
-<button data-oops-event="cta_click" data-oops-props='{"where":"hero"}'>Start</button>`;
+// Identify the user (hashed per project; counted as one affected user):
+oops.setUser({ id: "u_42", email: "ada@example.com" });
+
+// Plain messages and your own breadcrumbs:
+oops.message("Payment retried", "warning");
+oops.breadcrumb({ category: "cart", message: "coupon applied", data: { code: "SPRING" } });`;
     case "curl":
-      return `curl -X POST ${API_URL}/collect \\
+      return `curl -X POST ${API_URL}/ingest \\
   -H "X-Project-Key: ${key}" -H "Content-Type: application/json" \\
-  -H "User-Agent: my-backend/1.0" \\
-  -d '{"n": "purchase", "u": "https://myapp.example.com/checkout", "p": {"amount": 42}, "s": "api"}'`;
+  -d '{
+    "type": "ValueError", "message": "order 42 has no items", "level": "error",
+    "platform": "python", "environment": "production", "release": "1.4.2",
+    "frames": [{"filename": "app/orders.py", "function": "ship", "lineno": 88, "in_app": true}],
+    "user": {"id": "u_42"}, "tags": {"queue": "orders"}
+  }'`;
+    case "python":
+      return `import requests, sys, traceback
+
+OOPS_URL = "${API_URL}/ingest"
+OOPS_KEY = "${key}"
+
+def report(exc: BaseException, **extra) -> None:
+    """Send an exception to oops. Never raises: a failing app must not fail twice."""
+    tb = traceback.extract_tb(exc.__traceback__)
+    frames = [
+        {"filename": f.filename, "function": f.name, "lineno": f.lineno, "in_app": "site-packages" not in f.filename}
+        for f in reversed(tb)  # top of the stack first
+    ]
+    try:
+        requests.post(OOPS_URL, timeout=2, headers={"X-Project-Key": OOPS_KEY}, json={
+            "type": type(exc).__name__, "message": str(exc), "frames": frames,
+            "platform": "python", "environment": "production", "release": "1.4.2",
+            "extra": extra,
+        })
+    except Exception:
+        pass
+
+try:
+    ship(order)
+except Exception as exc:
+    report(exc, order_id=order.id)`;
+    case "node":
+      return `const OOPS_URL = "${API_URL}/ingest";
+const OOPS_KEY = "${key}";
+
+async function report(err, extra = {}) {
+  // Never throws: the stack string is parsed server-side into frames.
+  try {
+    await fetch(OOPS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Project-Key": OOPS_KEY },
+      body: JSON.stringify({
+        type: err.name, message: err.message, stack: err.stack,
+        platform: "node", environment: process.env.NODE_ENV ?? "production",
+        release: process.env.GIT_SHA, extra,
+      }),
+    });
+  } catch {}
+}
+
+process.on("uncaughtException", (err) => report(err));
+process.on("unhandledRejection", (reason) => report(reason instanceof Error ? reason : new Error(String(reason))));`;
   }
 }
 
@@ -52,7 +114,7 @@ export default component$(() => {
     rotateArmed: boolean;
     deleteText: string;
     purgeArmed: boolean;
-    purged: number | null;
+    purged: { events: number; issues: number } | null;
     tzOptions: string[];
     // editable fields
     name: string;
@@ -67,7 +129,7 @@ export default component$(() => {
     saved: "",
     busy: "",
     copied: "",
-    snippet: "script",
+    snippet: "sdk",
     rotateArmed: false,
     deleteText: "",
     purgeArmed: false,
@@ -144,8 +206,7 @@ export default component$(() => {
     state.busy = "rotate";
     state.rotateArmed = false;
     try {
-      const res = await api.rotateProjectKey(id);
-      if (state.project) state.project = { ...state.project, public_key: res.public_key, public_key_prefix: res.public_key_prefix };
+      await apply(await api.rotateProjectKey(id));
     } catch (e) {
       state.error = errorMessage(i18n, e, "psettings.rotateFailed");
     } finally {
@@ -162,7 +223,7 @@ export default component$(() => {
     state.purgeArmed = false;
     try {
       const res = await api.purgeEvents(id);
-      state.purged = res.deleted;
+      state.purged = { events: res.deleted_events, issues: res.deleted_issues };
       await load();
     } catch (e) {
       state.error = errorMessage(i18n, e, "psettings.purgeFailed");
@@ -185,12 +246,14 @@ export default component$(() => {
 
   const p = state.project;
   const key = p?.public_key ?? "oops_pub_…";
-  const kinds: { kind: SnippetKind; label: string }[] = [
-    { kind: "script", label: tr(i18n, "psettings.snippetScript") },
-    { kind: "pixel", label: tr(i18n, "psettings.snippetPixel") },
-    { kind: "events", label: tr(i18n, "psettings.snippetEvents") },
-    { kind: "curl", label: tr(i18n, "psettings.snippetApi") },
+  const kinds: { kind: SnippetKind; label: string; hint: string }[] = [
+    { kind: "sdk", label: tr(i18n, "psettings.snippetSdk"), hint: tr(i18n, "psettings.snippetSdkHint") },
+    { kind: "capture", label: tr(i18n, "psettings.snippetCapture"), hint: tr(i18n, "psettings.snippetCaptureHint") },
+    { kind: "curl", label: "curl", hint: tr(i18n, "psettings.snippetCurlHint") },
+    { kind: "python", label: "Python", hint: tr(i18n, "psettings.snippetPythonHint") },
+    { kind: "node", label: "Node", hint: tr(i18n, "psettings.snippetNodeHint") },
   ];
+  const currentHint = kinds.find((k) => k.kind === state.snippet)?.hint ?? "";
 
   return (
     <>
@@ -204,7 +267,7 @@ export default component$(() => {
             {/* Install */}
             <section class="card p-6" id="install">
               <h2 class="text-lg font-semibold text-slate-900">{tr(i18n, "psettings.installTitle")}</h2>
-              <p class="mt-1 text-sm text-slate-600">{tr(i18n, "psettings.installBody")}</p>
+              <p class="mt-1 text-sm text-slate-600">{tr(i18n, "psettings.installBodyErrors")}</p>
               <div class="mt-4">
                 <div class="label">{tr(i18n, "psettings.publicKey")}</div>
                 <div class="flex flex-wrap items-center gap-2">
@@ -217,53 +280,49 @@ export default component$(() => {
                   </button>
                   {state.rotateArmed && <button type="button" class="btn-ghost" onClick$={() => (state.rotateArmed = false)}>{tr(i18n, "common.cancel")}</button>}
                 </div>
-                <p class="mt-1 text-xs text-slate-500">{tr(i18n, "psettings.publicKeyHint")}</p>
+                <p class="mt-1 text-xs text-slate-500">{tr(i18n, "psettings.publicKeyHintErrors")}</p>
               </div>
-              <div class="mt-5 flex flex-wrap gap-1">
+              <div class="mt-5 flex flex-wrap gap-1" role="tablist">
                 {kinds.map((k) => (
-                  <button key={k.kind} type="button" class={["rounded-lg px-3 py-1.5 text-sm font-medium", state.snippet === k.kind ? "bg-primary-50 text-primary-700" : "text-slate-600 hover:bg-slate-100"]} onClick$={() => (state.snippet = k.kind)}>
+                  <button key={k.kind} type="button" role="tab" aria-selected={state.snippet === k.kind} class={["rounded-lg px-3 py-1.5 text-sm font-medium", state.snippet === k.kind ? "bg-primary-50 text-primary-700" : "text-slate-600 hover:bg-slate-100"]} onClick$={() => (state.snippet = k.kind)}>
                     {k.label}
                   </button>
                 ))}
               </div>
               <div class="relative mt-2">
-                <pre class="overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-slate-100 p-3 text-xs leading-relaxed" data-testid="snippet"><code>{snippet(state.snippet, key)}</code></pre>
+                <pre class="overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-slate-100 p-3 text-xs leading-relaxed" data-testid="snippet" data-snippet={state.snippet}><code>{snippet(state.snippet, key)}</code></pre>
                 <button type="button" class="btn-secondary absolute right-2 top-2 px-2 py-1 text-xs" onClick$={() => copy(snippet(state.snippet, key), "snippet")}>
                   {state.copied === "snippet" ? tr(i18n, "common.copied") : tr(i18n, "common.copy")}
                 </button>
               </div>
               <p class="mt-2 text-xs text-slate-500">
-                {state.snippet === "script" ? tr(i18n, "psettings.snippetScriptHint") : state.snippet === "pixel" ? tr(i18n, "psettings.snippetPixelHint") : state.snippet === "events" ? tr(i18n, "psettings.snippetEventsHint") : tr(i18n, "psettings.snippetApiHint")}{" "}
+                {currentHint}{" "}
                 <a href="/info/docs" class="text-primary-600 hover:underline">/info/docs</a>
               </p>
             </section>
 
-            {/* Tracking */}
-            <section class="card p-6" id="tracking">
-              <h2 class="text-lg font-semibold text-slate-900">{tr(i18n, "psettings.trackingTitle")}</h2>
-              <p class="mt-1 text-sm text-slate-600">{tr(i18n, "psettings.trackingBody")}</p>
+            {/* Ingest */}
+            <section class="card p-6" id="ingest">
+              <h2 class="text-lg font-semibold text-slate-900">{tr(i18n, "psettings.ingestTitle")}</h2>
+              <p class="mt-1 text-sm text-slate-600">{tr(i18n, "psettings.ingestBody")}</p>
               <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <label class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm">
                   <span>
-                    <span class="font-medium text-slate-800">{tr(i18n, "psettings.collectEnabled")}</span>
-                    {!features["collect-api"] && <span class="ml-2 badge bg-amber-100 text-amber-800">{tr(i18n, "psettings.featureOff")}</span>}
+                    <span class="font-medium text-slate-800">{tr(i18n, "psettings.ingestEnabled")}</span>
+                    <span class="mt-0.5 block text-xs text-slate-500">{tr(i18n, "psettings.ingestEnabledHint")}</span>
+                    {!features["ingest-api"] && <span class="mt-1 inline-block badge bg-amber-100 text-amber-800">{tr(i18n, "psettings.featureOff")}</span>}
                   </span>
-                  <Switch checked={p.collect_enabled} label={tr(i18n, "psettings.collectEnabled")} disabled={!!state.busy} onToggle$={(next) => save({ collect_enabled: next }, "collect")} />
+                  <Switch checked={p.ingest_enabled} label={tr(i18n, "psettings.ingestEnabled")} disabled={!!state.busy} onToggle$={(next) => save({ ingest_enabled: next }, "ingest")} />
                 </label>
                 <label class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm">
-                  <span class="font-medium text-slate-800">{tr(i18n, "psettings.excludeBots")}</span>
-                  <Switch checked={p.exclude_bots} label={tr(i18n, "psettings.excludeBots")} disabled={!!state.busy} onToggle$={(next) => save({ exclude_bots: next }, "bots")} />
-                </label>
-                <label class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-sm sm:col-span-2">
                   <span>
-                    <span class="font-medium text-slate-800">{tr(i18n, "psettings.storeIp")}</span>
-                    <span class="mt-0.5 block text-xs text-slate-500">{tr(i18n, "psettings.storeIpHint")}</span>
+                    <span class="font-medium text-slate-800">{tr(i18n, "psettings.storeIpErrors")}</span>
+                    <span class="mt-0.5 block text-xs text-slate-500">{tr(i18n, "psettings.storeIpHintErrors")}</span>
                   </span>
-                  <Switch checked={p.store_ip} label={tr(i18n, "psettings.storeIp")} disabled={!!state.busy} onToggle$={(next) => save({ store_ip: next }, "ip")} />
+                  <Switch checked={p.store_ip} label={tr(i18n, "psettings.storeIpErrors")} disabled={!!state.busy} onToggle$={(next) => save({ store_ip: next }, "ip")} />
                 </label>
               </div>
-              {!features.geo && <p class="mt-3 text-xs text-amber-700">{tr(i18n, "psettings.geoOff")}</p>}
-              <form class="mt-4 space-y-4" preventdefault:submit onSubmit$={() => save({ timezone: state.timezone.trim() || "UTC", allowed_origins: state.origins.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) }, "tracking")}>
+              <form class="mt-4 space-y-4" preventdefault:submit onSubmit$={() => save({ timezone: state.timezone.trim() || "UTC", allowed_origins: state.origins.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) }, "ingest-form")}>
                 <div class="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label class="label" for="tz">{tr(i18n, "dash.timezone")}</label>
@@ -275,13 +334,13 @@ export default component$(() => {
                   </div>
                   <div>
                     <label class="label" for="origins">{tr(i18n, "psettings.allowedOrigins")}</label>
-                    <textarea id="origins" class="input font-mono text-xs" rows={3} placeholder={"myapp.example.com\n*.example.com"} value={state.origins} onInput$={(_, el) => (state.origins = el.value)} />
-                    <p class="mt-1 text-xs text-slate-400">{tr(i18n, "psettings.allowedOriginsHint")}</p>
+                    <textarea id="origins" class="input font-mono text-xs" rows={3} placeholder={"myapp.example.com\napi.example.com"} value={state.origins} onInput$={(_, el) => (state.origins = el.value)} />
+                    <p class="mt-1 text-xs text-slate-400">{tr(i18n, "psettings.allowedOriginsHintErrors")}</p>
                   </div>
                 </div>
                 <div class="flex justify-end">
                   <button type="submit" class="btn-primary" disabled={!!state.busy}>
-                    {state.busy === "tracking" ? tr(i18n, "common.saving") : state.saved === "tracking" ? tr(i18n, "common.saved") : tr(i18n, "common.save")}
+                    {state.busy === "ingest-form" ? tr(i18n, "common.saving") : state.saved === "ingest-form" ? tr(i18n, "common.saved") : tr(i18n, "common.save")}
                   </button>
                 </div>
               </form>
@@ -321,8 +380,12 @@ export default component$(() => {
                 <div>
                   <div class="font-medium text-slate-800">{tr(i18n, "psettings.purgeTitle")}</div>
                   <div class="text-xs text-slate-500">
-                    {tr(i18n, "psettings.purgeBody")}
-                    {state.purged !== null && <span class="ml-1 text-green-700">{tr(i18n, "psettings.purged", { n: fmtNumber(state.purged, i18n.lang) })}</span>}
+                    {tr(i18n, "psettings.purgeBodyErrors")}
+                    {state.purged && (
+                      <span class="ml-1 text-green-700">
+                        {tr(i18n, "psettings.purgedErrors", { events: fmtNumber(state.purged.events, i18n.lang), issues: fmtNumber(state.purged.issues, i18n.lang) })}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div class="flex gap-2">
@@ -332,7 +395,7 @@ export default component$(() => {
                   {state.purgeArmed && <button type="button" class="btn-ghost" onClick$={() => (state.purgeArmed = false)}>{tr(i18n, "common.cancel")}</button>}
                 </div>
               </div>
-              <p class="mt-4 text-sm text-slate-600">{tr(i18n, "psettings.dangerBody")}</p>
+              <p class="mt-4 text-sm text-slate-600">{tr(i18n, "psettings.dangerBodyErrors")}</p>
               <form class="mt-3 flex flex-wrap items-end gap-3" preventdefault:submit onSubmit$={remove}>
                 <div class="flex-1">
                   <label class="label" for="delkey">{tr(i18n, "psettings.deleteProjectConfirm")}</label>

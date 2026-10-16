@@ -1,7 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import { useDocumentHead, useLocation } from "@builder.io/qwik-city";
 
-const DEFAULT_TITLE = "oops — privacy-friendly web analytics for your apps";
+const DEFAULT_TITLE = "oops — catch and fix the errors your apps throw";
 
 /**
  * Renders <title> + meta tags from each route's `head` export.

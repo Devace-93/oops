@@ -1,12 +1,11 @@
 # oops
 
-**Open-source, privacy-friendly web analytics for your apps, your scripts and your AI agents.**
-Register a project per site, drop one script tag (or a pixel, or one HTTP call)
-into it, and see page views, visitors, top pages, referrers, countries and
-cities, devices, browsers, languages, UTM campaigns and custom events — live.
-No cookies, no stored IP addresses, nothing to put in a consent banner. Read it
-in the dashboard, through a role-scoped REST API, or let an agent do it through
-the MCP server. MIT.
+**Open-source error tracking for your apps, your scripts and your AI agents.**
+Register a project per app, drop one script tag into it (or one HTTP call
+into your backend), and every exception shows up grouped into an issue with
+its stack trace, breadcrumbs, affected users, release and environment — live.
+Resolve or ignore from the dashboard, through a role-scoped REST API, or let
+an agent triage it through the MCP server. MIT.
 
 > Built by Enrique Magallon Alvarez. Hosted edition runs at `oops.3m4.net`
 > (free during early access); the core is free to self-host.
@@ -15,40 +14,44 @@ the MCP server. MIT.
 
 ## Why oops
 
-- **One tag, any stack.** A zero-dependency tracker under 3 KB (`/m.js`) that
-  counts page views, follows single-page-app route changes and exposes
-  `oops.track()` for custom events. Works in Qwik, Astro, React, jQuery
-  pages and Phaser games alike.
-- **Or no JavaScript at all.** A 1×1 pixel for emails and READMEs, and a
-  collect API for backends, CLIs and cron jobs.
-- **Privacy by default.** The tracker sets no cookie and stores nothing in
-  the browser. The server hashes IPs with a daily salt, keeps only the
-  derived country / region / city, discards the user agent once device /
-  browser / OS are known, and drops query strings from page URLs. Projects
-  that need raw addresses flip one switch (`store_ip`) and get them in the
-  event log and as a breakdown.
+- **One tag, any stack.** A zero-dependency browser SDK under 4 KB (`/o.js`)
+  that catches `window.onerror`, unhandled promise rejections and (optionally)
+  `console.error`, keeps a trail of clicks, route changes and failed requests
+  as breadcrumbs, and exposes `oops.capture()` for errors you handle yourself.
+  Works in Qwik, Astro, React, jQuery pages and Phaser games alike.
+- **Or no JavaScript at all.** An ingest API for backends, CLIs, cron jobs
+  and agents: one `POST` with the project key, any language.
+- **Grouped, not flooded.** Events are fingerprinted (error type + normalised
+  message + the frame that threw) into issues with a per-project `#number`,
+  event and user counts, first / last seen, environments and releases.
+  Resolved issues reopen by themselves when the error comes back.
+- **Privacy by default.** No raw user agents, no raw IPs unless a project
+  opts in, query strings dropped from URLs, secret-looking keys scrubbed to
+  `[Filtered]` in tags, extra, breadcrumbs and user objects.
 - **Agents are users too.** API keys carry a role (viewer / editor / admin),
-  every mutation is audited, destructive tools ask for confirmation.
-- **Your site never sees an error.** Hits over the monthly budget are counted
-  and dropped with a 202; only creating new projects is blocked.
-- **Self-host friendly.** Plain Docker, Postgres as the single store (raw
-  events, aggregated on the fly), optional GeoLite2 file, no billing provider.
+  every mutation is audited, destructive tools ask for confirmation, and an
+  agent can report its own failures into a project.
+- **Your app never gets a second error.** Events over the monthly budget, from
+  a paused project or an unknown origin are acknowledged with a 202 and
+  dropped; only creating new projects is blocked.
+- **Self-host friendly.** Plain Docker, Postgres as the single store, Redis
+  for rate limits, no billing provider, no geo database.
 
 ## Architecture
 
 ```
 Caddy (reverse proxy)
- ├─ web   Qwik City (Bun)  landing + /info + /blog + dashboard + /m.js
- ├─ api   Flask            auth, projects, collect + pixel, stats, keys, audit, billing webhooks
+ ├─ web   Qwik City (Bun)  landing + /info + /blog + dashboard + /o.js
+ ├─ api   Flask            auth, projects, ingest + grouping, issues, stats, keys, audit, billing webhooks
  └─ mcp   Node (MCP)       AI-agent access: tools over the API, RBAC, confirmations, audit
-      Postgres (events + everything else) · Redis (rate limits) · GeoLite2 (optional)
+      Postgres (events, issues and everything else) · Redis (rate limits)
 ```
 
 ```
-dbcore/               shared Python core (models, events, stats, plans, rbac, audit, usage)
+dbcore/               shared Python core (models, ingest, fingerprinting, stats, plans, rbac, audit, usage)
 services/api/         Flask REST API
-apps/web/             Qwik City frontend (Bun): marketing, dashboard, serves the tracker
-packages/tracker/     the tracker script (TypeScript, zero deps) → apps/web/public/m.js
+apps/web/             Qwik City frontend (Bun): marketing, dashboard, serves the SDK
+packages/sdk/         the browser SDK (TypeScript, zero deps) → apps/web/public/o.js
 packages/mcp-server/  MCP server (npm: oops-errors-mcp) — stdio + Streamable HTTP
 packages/shared/      plan_limits.json, api_key_roles.json, feature_flags.json (single source of truth)
 deploy/               docker-compose, Caddyfile, production runbook
@@ -63,7 +66,6 @@ The interface contract is [`CONTRACT.md`](CONTRACT.md); the plan is
 
 ```bash
 cp .env.example .env        # then edit secrets (JWT_SECRET_KEY, IP_HASH_SECRET, ...)
-make geoip                  # optional: put a GeoLite2-City.mmdb in deploy/geoip for locations
 make up                     # build + start everything; creates the schema
 # open http://localhost:8084
 ```
@@ -74,56 +76,130 @@ make up                     # build + start everything; creates the schema
 make up-selfhost            # BILLING_ENABLED=false; paywalls hidden, limits unlimited
 ```
 
-## Counting visits to your app
+## Reporting errors from your app
 
 Create a project in the dashboard and copy its public key (`oops_pub_…`). The
-key is public by design: it can only *send* hits, never read anything.
+key is public by design: it can only *send* events, never read anything, and
+you can rotate it at any time.
 
-### 1. The tracker (one tag)
+### 1. The browser SDK (one tag)
 
 ```html
-<script defer src="https://metrics.3m4.net/m.js" data-key="oops_pub_…"></script>
+<script defer src="https://oops.3m4.net/o.js"
+        data-key="oops_pub_…" data-env="production" data-release="1.4.2"></script>
 ```
 
-Counts every page view and SPA route change. Attributes: `data-spa`,
-`data-hash`, `data-dnt`, `data-local`, `data-api`. Custom events:
+Uncaught errors and unhandled rejections are reported automatically, with the
+last 30 breadcrumbs (clicks, route changes, failed `fetch` / XHR). Attributes:
+`data-env`, `data-release`, `data-console` (also capture `console.error`),
+`data-sample`, `data-local`, `data-api`, `data-user`. Errors you catch
+yourself, and who they happened to:
 
 ```js
-oops.track("signup", { plan: "pro" });
-```
-```html
-<button data-oops-event="cta_click" data-oops-props='{"where":"hero"}'>Start</button>
+try {
+  await checkout(cart);
+} catch (err) {
+  oops.capture(err, { level: "error", tags: { page: "checkout" }, extra: { cart: cart.size } });
+}
+
+oops.setUser({ id: "u_42", email: "ada@example.com" });   // affected-user counts; null to clear
+oops.setTag("plan", "pro");
+oops.breadcrumb({ category: "payment", message: "3DS challenge shown" });
+oops.message("Cart restored from local storage", "info");
 ```
 
-### 2. The pixel (no JavaScript)
+### 2. Server-side (backends, CLIs, cron, agents)
 
-```html
-<img src="https://oops.3m4.net/api/collect/pixel.gif?k=oops_pub_…&u=/newsletter/october" alt="" width="1" height="1">
-```
-
-### 3. The collect API (backends, CLIs, cron)
+Post one event to the ingest API with the project key. Give at least `type`
+or `message`; `stack` is parsed server-side (V8, Firefox / Safari and Python
+traceback formats). Always answers **202**: `{ok:true, event_id, issue_id,
+issue_number}` or `{ok:false, reason}` (`paused` | `origin` | `limit`).
 
 ```bash
-curl -X POST https://oops.3m4.net/api/collect \
+curl -X POST https://oops.3m4.net/api/ingest \
   -H "X-Project-Key: oops_pub_…" -H "Content-Type: application/json" \
-  -d '{"n":"purchase","u":"https://myapp.example.com/checkout","p":{"amount":42},"s":"api"}'
-# HTTP 202 {"ok":true}
+  -d '{"type":"TimeoutError","message":"upstream took 30s","level":"error",
+       "platform":"shell","release":"2026.10.16","tags":{"job":"nightly-sync"}}'
 ```
 
-Fields: `n` (event name, default `pageview`), `u` (URL or path), `r`
-(referrer), `t` (title), `w`/`h` (screen), `l` (language), `p` (props ≤ 2 KB),
-`s` (`script` | `pixel` | `api`). JSON, form-encoded and `text/plain` bodies
-are all accepted.
+```python
+import requests, sys, traceback
 
-## Reading the numbers
+def report(exc, **extra):
+    requests.post(
+        "https://oops.3m4.net/api/ingest",
+        headers={"X-Project-Key": "oops_pub_…"},
+        json={
+            "type": type(exc).__name__,
+            "message": str(exc),
+            "stack": "".join(traceback.format_exception(exc)),
+            "platform": "python",
+            "release": "1.4.2",
+            "environment": "production",
+            "extra": extra,
+        },
+        timeout=3,
+    )
+
+try:
+    run_job()
+except Exception as exc:
+    report(exc, job="nightly-sync")
+    sys.exit(1)
+```
+
+```js
+process.on("uncaughtException", (err) => {
+  fetch("https://oops.3m4.net/api/ingest", {
+    method: "POST",
+    headers: { "X-Project-Key": "oops_pub_…", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: err.name, message: err.message, stack: err.stack,
+      platform: "node", release: process.env.RELEASE, environment: process.env.NODE_ENV,
+    }),
+    keepalive: true,
+  }).finally(() => process.exit(1));
+});
+```
+
+Fields: `type`, `message`, `level` (`fatal` | `error` | `warning` | `info`),
+`stack` or `frames` (top of the stack first), `url`, `release`,
+`environment`, `platform`, `user` (`id`, `email`, `name`), `tags`, `extra`,
+`breadcrumbs`, `fingerprint` (explicit grouping key), `ts`. JSON,
+form-encoded and `text/plain` bodies are all accepted; the key can also travel
+in the body as `k`.
+
+### 3. Batch
 
 ```bash
-curl "https://oops.3m4.net/api/projects/$PROJECT/stats?period=7d&country=ES" -H "X-API-Key: oops_live_…"
+curl -X POST https://oops.3m4.net/api/ingest/batch \
+  -H "X-Project-Key: oops_pub_…" -H "Content-Type: application/json" \
+  -d '{"events":[{"type":"ValueError","message":"bad input"},{"message":"retrying","level":"warning"}]}'
+# 202 {"ok":true,"results":[{...},{...}]}
 ```
 
-One call returns totals, the previous period, a time series, the top values of
-every dimension and the live counter. `…/stats/breakdown?by=path` pages through
-one dimension; `…/events` lists raw hits; `…/live` is the last five minutes.
+Up to 20 events per batch, 64 KB per request.
+
+## Triage
+
+```bash
+# open issues of the last 7 days, the ones hurting most users first
+curl "https://oops.3m4.net/api/projects/$PROJECT/issues?period=7d&sort=users" -H "X-API-Key: oops_live_…"
+
+# one issue by number, with its latest event (frames, breadcrumbs, tags)
+curl "https://oops.3m4.net/api/projects/$PROJECT/issues/12" -H "X-API-Key: oops_live_…"
+
+# resolve it (it reopens as "regressed" if the error comes back); ignored | open also work
+curl -X PATCH "https://oops.3m4.net/api/projects/$PROJECT/issues/12" \
+  -H "X-API-Key: oops_live_…" -H "Content-Type: application/json" -d '{"status":"resolved"}'
+
+# the numbers: totals vs previous period, series, breakdowns by level / environment / release / browser / os / device / type
+curl "https://oops.3m4.net/api/projects/$PROJECT/stats?period=7d&environment=production" -H "X-API-Key: oops_live_…"
+```
+
+`…/issues/bulk` sets one status on up to 100 issues, `…/issues/12/events`
+pages through the occurrences, `…/events` searches raw events, `…/live` is
+the last few minutes. See [`CONTRACT.md`](CONTRACT.md) for every endpoint.
 
 ## AI agents (MCP)
 
@@ -140,13 +216,39 @@ Claude Desktop / Cursor (JSON config):
 { "mcpServers": { "oops": { "command": "npx", "args": ["-y", "oops-errors-mcp"], "env": { "OOPS_API_KEY": "oops_live_…" } } } }
 ```
 
-Then: *"how did the docs do this week?"*, *"which countries visit the pricing
-page?"*, *"write the weekly report for Kinegram"*. See
-[`packages/mcp-server`](packages/mcp-server/) for the tool/role table.
+Then: *"what is breaking in checkout today?"*, *"show me issue #12 and its
+stack"*, *"which errors affect the most users since release 1.4.2?"*,
+*"resolve everything from the old release"*, *"triage the API project"*, or
+*"report this failure to the agents project"* (`report_error` posts the
+agent's own exception into a project it can see). The `triage` prompt
+summarises new vs regressed issues and proposes what to fix, resolve or
+ignore. See [`packages/mcp-server`](packages/mcp-server/) for the tool/role
+table.
+
+## How events are grouped
+
+An event joins the issue with the same **fingerprint**: the client-provided
+`fingerprint` array when present, otherwise `type` + the normalised message +
+the top in-app frame (file without query string + function). Normalisation
+replaces numbers, hex blobs, UUIDs and quoted strings with placeholders, so
+`User 42 not found` and `User 43 not found` are one issue. A resolved issue
+that receives a new event reopens and is flagged as regressed; an ignored one
+stays ignored but keeps counting.
+
+## Privacy
+
+Raw IPs are hashed with a daily salt (a project can opt in to keep them with
+`store_ip`); the user agent is reduced to browser / OS / device and discarded;
+URLs lose their query string and fragment; anything that looks like a
+password, token, cookie, API key or card number inside tags, extra,
+breadcrumbs, user or the message is replaced by `[Filtered]`. The `user`
+object you send (`id`, `email`, `name`) is stored as sent: it is your own
+identifier for your own user. Events are kept for the plan's retention window
+and pruned nightly.
 
 ## Screenshots
 
-_Coming with the first release: overview, events log, settings._
+_Coming with the first release: issues inbox, issue page, settings._
 
 ## Common tasks
 
@@ -157,9 +259,8 @@ _Coming with the first release: overview, events log, settings._
 | `make logs` | tail all logs |
 | `make migrate` | create tables + apply Alembic migrations |
 | `make prune` | delete events older than each plan's retention window |
-| `make tracker` | rebuild the tracker bundle into `apps/web/public` |
-| `make geoip` | copy the shortener's local GeoLite2 database (dev) |
-| `make smoke` | curl health, tracker headers and a collect → stats round-trip |
+| `make sdk` | rebuild the browser SDK into `apps/web/public` (`o.js` + `o/v1.js`) |
+| `make smoke` | curl health, SDK headers and an ingest → issues round-trip |
 | `make e2e` | run the Playwright suite against the running stack |
 
 ## Languages and theme

@@ -20,9 +20,9 @@ export default component$(() => {
         <script
           dangerouslySetInnerHTML={`try{var t=localStorage.getItem("3m4.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;var l=localStorage.getItem("3m4.lang");if(l){document.documentElement.lang=l;document.documentElement.dir=l.slice(0,2)==="ar"?"rtl":"ltr"}}catch(e){}`}
         />
-        {/* oops web analytics (page views, visitors, referrers, devices;
-            cookie-less). Rendered only when a project key is configured at
-            build time. */}
+        {/* metrics.3m4.net web analytics for oops itself (cookie-less; not
+            part of the oops brand). Rendered only when a project key is
+            configured at build time. */}
         {import.meta.env.VITE_METRICS_PROJECT_KEY && (
           <script
             src={import.meta.env.VITE_METRICS_TRACKER_URL || "https://metrics.3m4.net/m.js"}

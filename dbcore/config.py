@@ -46,17 +46,15 @@ class Config:
     # rate limiting
     rate_limit_default: str = os.getenv("RATE_LIMIT_DEFAULT", "120/minute")
     rate_limit_public_api: str = os.getenv("RATE_LIMIT_PUBLIC_API", "60/minute")
-    # Collect: per (project public key, client IP). Tracker traffic is bursty
-    # (SPAs fire a hit per route change), so the budget is generous.
-    rate_limit_collect: str = os.getenv("RATE_LIMIT_COLLECT", "600/minute")
+    # Ingest: per (project public key, client IP). A broken deploy can make one
+    # page report in bursts, so the budget is generous; the SDK also throttles
+    # itself to 30 events per minute per page.
+    rate_limit_ingest: str = os.getenv("RATE_LIMIT_INGEST", "600/minute")
 
-    # privacy: raw IPs are never stored; see dbcore/privacy.py
+    # privacy: raw IPs are never stored by default; see dbcore/privacy.py
     ip_hash_secret: str = os.getenv("IP_HASH_SECRET", "dev-insecure-ip-salt")
 
-    # geo: MaxMind GeoLite2-City database (optional; no file = no location).
-    geoip_db_path: str = os.getenv("GEOIP_DB_PATH", "/geoip/GeoLite2-City.mmdb")
-
-    # How many minutes count as "live" for the live-visitors endpoint.
+    # How many minutes count as "live" for the live-events endpoint.
     live_window_min: int = int(os.getenv("LIVE_WINDOW_MIN", "5"))
 
 

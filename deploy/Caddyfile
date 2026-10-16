@@ -3,7 +3,7 @@
 # same rules.
 
 :8084 {
-	# --- API (includes the public collect endpoints + pixel) ---
+	# --- API (includes the public ingest endpoints) ---
 	handle /api/* {
 		reverse_proxy api:5000
 	}
@@ -13,10 +13,10 @@
 		reverse_proxy mcp:3333
 	}
 
-	# --- Tracker script: a static file served by the web service, embedded by
+	# --- Browser SDK: a static file served by the web service, embedded by
 	# third-party sites, so it must be cacheable and CORS-open.
-	@tracker path /m.js /m/*
-	handle @tracker {
+	@sdk path /o.js /o/*
+	handle @sdk {
 		header Cache-Control "public, max-age=3600"
 		header Access-Control-Allow-Origin "*"
 		reverse_proxy web:3000

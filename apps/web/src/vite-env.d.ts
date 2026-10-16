@@ -10,7 +10,7 @@ interface ImportMetaEnv {
   readonly VITE_POSTHOG_HOST?: string;
   readonly VITE_REVENUECAT_PUBLIC_KEY?: string;
   readonly VITE_BILLING_ENABLED?: string;
-  /** oops (oops.3m4.net) project public key; the tracker is rendered only when set. */
+  /** metrics.3m4.net project public key for tracking oops itself; the tracker is rendered only when set. */
   readonly VITE_METRICS_PROJECT_KEY?: string;
   readonly VITE_METRICS_TRACKER_URL?: string;
 }

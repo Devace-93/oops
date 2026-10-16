@@ -31,13 +31,11 @@ const ro: PartialCatalog = {
 
   // Project tabs (components/project-nav.tsx)
   "pnav.back": "← Toate proiectele",
-  "pnav.overview": "Prezentare generală",
   "pnav.events": "Evenimente",
   "pnav.settings": "Setări",
   "pnav.openSite": "Deschide site-ul",
   "pnav.paused": "În pauză",
   "pnav.live": "Live",
-  "pnav.liveHint": "A primit un hit în ultimele 5 minute",
 
   // Plan/limit formatters (src/lib/plans.ts)
   "plans.unlimited": "Nelimitat",
@@ -47,89 +45,34 @@ const ro: PartialCatalog = {
   "plans.years": "{n} ani",
 
   // Landing — hero
-  "landing.badge": "Open source · MIT · Self-hosting · Fără cookie-uri",
-  "landing.heroTitle": "Află cine îți vizitează aplicațiile,",
-  "landing.heroTitleAccent": "fără să urmărești pe nimeni",
-  "landing.heroBody":
-    "oops numără afișările de pagină și vizitatorii pentru fiecare proiect înregistrat: paginile de top, sursele de trafic, țările și orașele, dispozitivele, browserele și evenimentele personalizate — dintr-un singur tag script, un pixel sau un apel API. Fără cookie-uri, fără adrese IP stocate, nimic de pus într-un banner de consimțământ.",
   "landing.getStarted": "Începe gratuit",
   "landing.whyFree": "De ce e gratuit acum",
   "landing.seePricing": "Vezi prețurile",
   "landing.readDocs": "Citește documentația",
   "landing.earlyNote":
     "Acces timpuriu: fiecare cont are acces complet, gratuit. Planurile vin mai târziu, cu notificare prealabilă.",
-  "landing.freeNote": "Plan gratuit: {projects} proiecte și {events} evenimente / lună. Fără card.",
 
   // Landing — three paths
-  "landing.pathsTitle": "Trei moduri de a număra",
-  "landing.pathsBody":
-    "Alege-l pe cel care se potrivește fiecărei aplicații. Toate ajung în același panou.",
-  "landing.pathScriptTitle": "Un singur tag script",
-  "landing.pathScriptBody":
-    "Sub 3 KB, fără dependențe. Numără fiecare afișare de pagină, urmărește schimbările de rută din aplicațiile SPA și expune oops.track() pentru evenimente personalizate. Funcționează la fel în Qwik, Astro, React, pagini cu jQuery și jocuri Phaser.",
-  "landing.pathPixelTitle": "Pixel de urmărire",
-  "landing.pathPixelBody":
-    "O imagine 1×1 pentru locurile unde JavaScript nu poate rula: e-mailuri, fișiere README, documentație găzduită în altă parte. URL-ul spune ce pagină sau eveniment reprezintă.",
-  "landing.pathApiTitle": "Collect API",
-  "landing.pathApiBody":
-    "Un singur POST cu cheia publică a proiectului, din backend, un CLI, un server de joc sau un cron job. Perfect pentru aplicații fără DOM.",
 
   // Landing — how it works
   "landing.howTitle": "Cum funcționează",
   "landing.step1Title": "1. Creează un proiect",
-  "landing.step1Body":
-    "Un proiect per site sau aplicație. Primești o cheie publică pentru script, pixel și API și îi alegi fusul orar.",
-  "landing.step2Title": "2. Lipește snippetul",
-  "landing.step2Body":
-    "Copiază-l din setările proiectului în layoutul tău. Primele afișări de pagină apar în câteva secunde.",
-  "landing.step3Title": "3. Citește panoul",
-  "landing.step3Body":
-    "Alege un interval, dă clic pe orice pagină, țară sau dispozitiv ca să filtrezi totul după el, urmărește contorul live sau lasă un agent AI să citească cifrele prin MCP.",
 
   // Landing — what you see
-  "landing.seeTitle": "Tot ce vrei să știi, nimic în plus",
-  "landing.seeBody":
-    "Panoul răspunde la întrebările pe care oamenii chiar și le pun despre un site, și se oprește acolo.",
-  "landing.seeWhereTitle": "De unde.",
-  "landing.seeWhereBody":
-    "Surse de trafic, UTM source / medium / campaign, țări, regiuni și orașe.",
-  "landing.seeWhoTitle": "Pe ce.",
-  "landing.seeWhoBody":
-    "Desktop, mobil sau tabletă; browser și sistem de operare; dimensiunea ecranului și limba.",
-  "landing.seeWhatTitle": "Ce fac.",
-  "landing.seeWhatBody":
-    "Paginile de top, căile de intrare și evenimentele personalizate pe care le trimiți (înregistrări, achiziții, clicuri) cu proprietățile lor.",
-  "landing.seeLiveTitle": "Chiar acum.",
-  "landing.seeLiveBody": "Vizitatorii din ultimele cinci minute și paginile pe care se află.",
 
   // Landing — privacy
-  "landing.privacyTitle": "Prietenos cu confidențialitatea prin construcție",
-  "landing.privacyBody":
-    "Trackerul nu setează niciun cookie și nu scrie nimic în browser. Serverul hashuiește adresa IP a fiecărui vizitator cu un salt care se schimbă zilnic, păstrează doar țara, regiunea și orașul derivate și aruncă user agentul de îndată ce cunoaște dispozitivul, browserul și sistemul de operare.",
-  "landing.privacy1":
-    "Fără cookie-uri, fără localStorage, fără fingerprinting între site-uri sau zile",
-  "landing.privacy2": "Adresele IP brute nu sunt stocate niciodată — doar un hash zilnic cu salt",
-  "landing.privacy3":
-    "Query string-urile sunt eliminate din URL-urile paginilor (cu excepția tagurilor UTM), așa că tokenurile și e-mailurile nu ajung niciodată în panou",
-  "landing.privacy4": "Suport opțional pentru Do Not Track, iar boții sunt filtrați",
-  "landing.apiNote": "Cheile publice pot doar trimite hituri. Nu pot citi nimic, niciodată.",
   "landing.panelRequest": "Cerere",
   "landing.panelResponse": "Răspuns",
 
   // Landing — MCP section
   "landing.mcpBadge": "Model Context Protocol",
-  "landing.mcpTitle": "Întreabă-ți agentul AI cum merge site-ul",
   "landing.mcpIntro":
     "oops include un server MCP. Conectează-l la Claude Code, Claude Desktop, Cursor sau orice host MCP și întreabă lucruri precum",
-  "landing.mcpExample1": "„cum s-a schimbat traficul către documentație săptămâna asta?”",
   "landing.mcpOr": "sau",
-  "landing.mcpExample2": "„ce țări vizitează cel mai mult pagina de prețuri?”",
   "landing.mcpBullet1Title": "Chei cu roluri.",
   "landing.mcpBullet1Body":
     "O cheie viewer nici măcar nu vede uneltele de ștergere; editor și admin deblochează mai mult. Aplicat și de API.",
   "landing.mcpBullet2Title": "Omul în buclă.",
-  "landing.mcpBullet2Body":
-    "Acțiunile distructive (ștergerea unui proiect, golirea evenimentelor lui) îți cer confirmarea înainte să se întâmple ceva.",
   "landing.mcpBullet3Title": "Jurnal de audit.",
   "landing.mcpBullet3Body":
     "Fiecare modificare și fiecare apel refuzat sunt înregistrate, pe server și pe partea agentului.",
@@ -146,14 +89,9 @@ const ro: PartialCatalog = {
 
   // Landing — self-host callout + closing CTA
   "landing.selfhostTitle": "Găzduiește-l singur (MIT, open source)",
-  "landing.selfhostBody1":
-    "Întregul stack — API-ul Flask, trackerul, serverul MCP și această aplicație Qwik — este sub licență MIT. Rulează-l pe propriul VPS cu un singur",
   "landing.selfhostBody2":
     ". Fără cod de facturare, fără limite în afara celor pe care le configurezi tu.",
   "landing.viewGithub": "Vezi pe GitHub",
-  "landing.ctaTitle": "Vezi primul vizitator într-un minut",
-  "landing.ctaBody":
-    "Creează un proiect, lipește un tag script și urmărește cum se mișcă contorul live.",
 
   // Blog (chrome only)
   "blog.title": "Blog",
@@ -175,8 +113,6 @@ const ro: PartialCatalog = {
   "info.plannedPricingBody":
     "Planurile pe care intenționăm să le introducem după accesul timpuriu.",
   "info.docsTitle": "Docs",
-  "info.docsBody":
-    "Ghid de instalare a trackerului, pixel, collect API, referința stats API și configurarea MCP.",
   "info.termsTitle": "Termeni",
   "info.termsBody": "Termenii serviciului (în curând).",
   "info.privacyTitle": "Confidențialitate",
@@ -187,19 +123,13 @@ const ro: PartialCatalog = {
   // Pricing page
   "pricing.title": "Prețuri simple și corecte",
   "pricing.titlePlanned": "Prețuri planificate",
-  "pricing.intro":
-    "Începe gratuit. Treci la un plan superior când ai nevoie de mai multe proiecte, mai multe evenimente pe lună sau retenție mai lungă. Self-hosting pentru totul nelimitat.",
   "pricing.introPlanned":
     "Acestea sunt planurile pe care intenționăm să le introducem după accesul timpuriu. Nimic de aici nu se aplică încă.",
   "pricing.earlyTitle": "Acum fiecare cont are acces complet, gratuit.",
-  "pricing.earlyBody":
-    "Proiecte, evenimente și retenție nelimitate, API-ul și serverul MCP. Când vor apărea planurile, vom anunța pe blog și prin e-mail înainte ca vreo limită să se aplice unui cont existent. Prețurile și limitele de mai jos se mai pot schimba.",
   "pricing.earlyCta": "Citește ce vor include planurile plătite",
   "pricing.enterpriseTitle": "Ai nevoie de limite personalizate, SSO sau SLA?",
   "pricing.enterpriseBody": "Planurile Enterprise sunt adaptate echipei tale.",
   "pricing.contactUs": "Contactează-ne",
-  "pricing.footnote":
-    "Toate prețurile în USD. Facturarea anuală economisește ~20%. Numărul de proiecte și de chei sunt limite stricte; evenimentele peste bugetul lunar sunt numărate, dar nu stocate, iar site-ul tău nu vede niciodată o eroare. Evenimentele mai vechi decât fereastra de retenție sunt șterse.",
   "pricing.footnoteEarly": "Nimic din acestea nu se aplică în accesul timpuriu.",
 
   // Pricing table (plan labels come from packages/shared/plan_limits.json)
@@ -222,76 +152,21 @@ const ro: PartialCatalog = {
 
   // Docs
   "docs.title": "Docs",
-  "docs.intro":
-    "Cum pui oops în aplicația ta, trimiți hituri de oriunde și citești cifrele prin API-ul REST sau printr-un agent AI. Contractul complet — fiecare endpoint, obiect și eroare — se află în repository.",
   "docs.fullContract": "Citește contractul complet (CONTRACT.md)",
   "docs.baseUrl": "URL de bază",
-  "docs.trackerTitle": "Scriptul tracker",
-  "docs.trackerBody":
-    "Un script fără dependențe, sub 3 KB, servit de pe acest host. Adaugă-l o dată în layout; trimite un hit per afișare de pagină și per schimbare de rută în SPA, fără cookie-uri și fără nimic stocat în browser.",
-  "docs.trackerAttrsTitle": "Atribute (valorile implicite afișate)",
   "docs.attrKey": "cheia publică a proiectului (obligatorie).",
-  "docs.attrSpa":
-    "se leagă de History API și trimite o afișare de pagină la fiecare schimbare de rută. Setează false ca să apelezi tu oops.pageview().",
-  "docs.attrHash": "rutare cu hash: păstrează #fragment în URL și ascultă hashchange.",
-  "docs.attrDnt": "respectă semnalul Do Not Track al browserului.",
-  "docs.attrLocal":
-    "urmărește și pe localhost, IP-uri brute, file: și *.local (ignorate implicit).",
-  "docs.attrApi": "suprascrie endpointul collect (instanțe self-hosted în spatele altui host).",
-  "docs.trackerJsTitle": "JavaScript API",
-  "docs.trackerJsBody":
-    "window.oops expune track(name, props) pentru evenimente personalizate și pageview() pentru afișări de pagină manuale. Apelurile puse în coadă înainte de încărcarea scriptului sunt reluate.",
-  "docs.trackerDeclarative":
-    "Clicurile pe elementele cu data-oops-event sunt urmărite automat, cu proprietăți JSON opționale:",
-  "docs.trackerWhat":
-    "Ce se trimite: URL-ul paginii fără query string (tagurile UTM sunt citite și apoi eliminate), referrerul, titlul, dimensiunea ecranului și limba browserului. Dispozitivul, browserul, sistemul de operare și locația sunt derivate pe server din cerere și nu sunt stocate niciodată în formă brută.",
-  "docs.pixelTitle": "Pixel de urmărire",
-  "docs.pixelBody":
-    "Pentru locurile unde nu rulează JavaScript — newslettere, fișiere README, documentație pe alt host. Imaginea este un GIF transparent de 43 de bytes, niciodată pus în cache. Transmite pagina ca u și, opțional, un nume de eveniment ca n.",
-  "docs.collectTitle": "Collect API",
-  "docs.collectBody":
-    "POST /api/collect cu cheia publică a proiectului în headerul X-Project-Key (sau într-un câmp k). Sunt acceptate corpuri JSON, form-encoded și text/plain, CORS este deschis, iar răspunsul este întotdeauna 202, astfel încât un site urmărit nu vede niciodată o eroare.",
-  "docs.collectField1":
-    "n: numele evenimentului (implicit pageview). 1-60 de litere, cifre, spații, _ . : / sau -.",
-  "docs.collectField2":
-    "u: URL-ul sau calea paginii (obligatoriu pentru orice are sens). Query string-urile sunt citite doar pentru tagurile UTM.",
-  "docs.collectField3":
-    "r: URL-ul referrerului; t: titlul paginii (≤ 200); l: limba (≤ 16); w / h: dimensiunea ecranului.",
-  "docs.collectField4":
-    "p: un obiect JSON cu proprietăți pentru evenimente personalizate (≤ 2 KB).",
-  "docs.collectField5":
-    "s: sursa — script (implicit), pixel sau api. Dispozitivul, browserul, sistemul de operare și locația vin din headerele și adresa cererii înseși.",
-  "docs.collectResponses":
-    "Corpul spune ce s-a întâmplat: { ok: true } când a fost stocat, sau { ok: false, reason } cu reason = paused (urmărire oprită pentru proiect), origin (hostname care nu e în lista permisă), bot (crawler sau browser headless) sau limit (peste bugetul lunar — numărat, nu stocat).",
   "docs.authTitle": "Autentificare",
   "docs.authBody": "Trei tipuri de credențiale, fiecare pentru o treabă:",
   "docs.authDashboard":
     "Sesiuni de panou: tokenuri JWT bearer emise de /auth/login. Au toate scope-urile.",
   "docs.authApiKey":
     "API de administrare: chei API cu un rol (viewer / editor / admin). Header X-API-Key: oops_live_… (sau Authorization: Bearer).",
-  "docs.authPublicKey":
-    "Collect API, tracker și pixel: cheile publice ale proiectului. Header X-Project-Key: oops_pub_… (sau câmpul k). Identifică un singur proiect și pot doar trimite hituri.",
   "docs.projectsTitle": "Proiecte",
-  "docs.projectsBody":
-    "Un proiect este un site sau o aplicație. Deține o cheie publică, un fus orar (folosit pentru împărțirea pe zile), o listă opțională de hostname-uri permise și comutatoarele pentru collect / boți.",
   "docs.statsTitle": "Statistici",
-  "docs.statsBody":
-    "Intervalele sunt date locale inclusive în fusul din parametrul tz (implicit: fusul proiectului), ca period=today|yesterday|7d|30d|90d|12mo sau from/to. Orice dimensiune poate fi transmisă ca filtru (de ex. country=ES&device=mobile) și tot răspunsul este restrâns la ea. Vizitatorii sunt numărați cu un hash zilnic, deci pe mai multe zile sunt unici zilnici, însumați.",
   "docs.dimensionsTitle": "Dimensiuni",
-  "docs.dimensionsBody":
-    "Utilizabile ca defalcare (by=) și ca filtre pe fiecare endpoint de statistici și evenimente. referrer=(direct) selectează hiturile fără referrer.",
-  "docs.errorsTitle": "Erori și limite",
-  "docs.errorsBody":
-    "Erorile sunt JSON: { \"error\": { \"code\", \"message\" } }. Crearea peste o limită a planului răspunde 402 limit_reached cu error.which = projects | api_keys. Hiturile peste bugetul lunar de evenimente sunt acceptate (202), dar nu stocate.",
-  "docs.privacyBody":
-    "Confidențialitate: oops nu stochează niciodată adrese IP brute sau user agenți — doar un hash zilnic cu salt și câmpurile derivate dispozitiv / browser / sistem de operare / locație. URL-urile paginilor își pierd query string-ul înainte de stocare.",
   "docs.mcpTitle": "MCP (agenți AI)",
-  "docs.mcpBody":
-    "Serverul MCP expune API-ul de administrare ca unelte, filtrate după rolul cheii cu care te conectezi. Uneltele distructive cer confirmare. Un prompt weekly_report ghidează un model prin cifrele unui proiect.",
   "docs.mcpLocal": "Local (stdio, npm)",
   "docs.mcpRemote": "La distanță (Streamable HTTP)",
-  "docs.mcpTools":
-    "Unelte: list_projects, get_project, create_project, update_project, rotate_project_key, delete_project, project_summary, get_stats, get_breakdown, list_events, get_live, purge_events, get_usage, get_audit_log.",
   "docs.colMethod": "Metodă",
   "docs.colPath": "Cale",
   "docs.colScope": "Scope",
@@ -327,8 +202,6 @@ const ro: PartialCatalog = {
 
   // Site-building curtain
   "building.title": "Construim oops",
-  "building.body":
-    "Analytics prietenos cu confidențialitatea pentru aplicațiile tale. Site-ul nu e deschis încă — dar trackerul, collect API și serverul MCP răspund în continuare fără probleme.",
   "building.footer": "oops.3m4.net · în curând",
 
   // Shared
@@ -366,29 +239,10 @@ const ro: PartialCatalog = {
   "interval.hour": "pe oră",
   "interval.day": "pe zi",
   "interval.month": "pe lună",
-  "metric.pageviews": "Afișări de pagină",
-  "metric.visitors": "Vizitatori",
   "metric.events": "Evenimente",
-  "dim.path": "Pagini",
-  "dim.hostname": "Hostname",
-  "dim.referrer": "Surse de trafic",
-  "dim.direct": "Direct / niciunul",
-  "dim.country": "Țări",
-  "dim.region": "Regiuni",
-  "dim.city": "Orașe",
   "dim.device": "Dispozitive",
   "dim.browser": "Browsere",
   "dim.os": "Sisteme de operare",
-  "dim.lang": "Limbi",
-  "dim.utm_source": "Surse UTM",
-  "dim.utm_medium": "Medii UTM",
-  "dim.utm_campaign": "Campanii UTM",
-  "dim.name": "Evenimente personalizate",
-  "dim.ip": "Adrese IP",
-  "device.desktop": "Desktop",
-  "device.mobile": "Mobil",
-  "device.tablet": "Tabletă",
-  "device.bot": "Bot",
 
   // Auth: login
   "auth.loginTitle": "Autentificare",
@@ -428,8 +282,6 @@ const ro: PartialCatalog = {
   "dash.createFailed": "Proiectul nu a putut fi creat.",
   "dash.usageProjects": "Proiecte",
   "dash.usageEvents": "Evenimente în această perioadă",
-  "dash.usageEventsHint":
-    "Afișări de pagină + evenimente personalizate primite în această lună calendaristică.",
   "dash.eventsOverage": "Peste bugetul lunar: {n} evenimente au fost numărate, dar nu stocate.",
   "dash.newProject": "Proiect nou",
   "dash.projectName": "Numele proiectului",
@@ -442,58 +294,27 @@ const ro: PartialCatalog = {
   "dash.timezoneHint": "Zilele din panou încep la miezul nopții în acest fus.",
   "dash.createProject": "Creează proiect",
   "dash.searchPlaceholder": "Caută proiecte…",
-  "dash.empty":
-    "Niciun proiect încă. Creează unul per site sau aplicație ca să primești cheia publică și snippetul de instalare.",
   "dash.noMatch": "Niciun proiect nu se potrivește căutării.",
-  "dash.today": "azi",
-  "dash.views30d": "afișări · 30 zile",
-  "dash.visitors30d": "vizitatori · 30 zile",
-  "dash.lastSeen": "Ultimul hit {when}",
-  "dash.noDataYet": "Nicio dată încă",
   "dash.openProject": "Deschide →",
 
   // Overview
-  "overview.loadFailed": "Statisticile nu au putut fi încărcate.",
   "overview.range": "Interval de date",
   "overview.from": "De la",
   "overview.to": "Până la",
   "overview.tzHint": "Fusul orar al proiectului; schimbă-l din Setări.",
-  "overview.liveNow": "{n} vizitatori chiar acum",
   "overview.vsPrevious": "Comparativ cu perioada anterioară de aceeași lungime",
   "overview.vsPreviousShort": "vs. anterior",
-  "overview.viewsPerVisitor": "Afișări / vizitator",
-  "overview.viewAll": "Vezi tot",
   "overview.noData": "Nimic în acest interval.",
-  "overview.noGeo": "Fără date de locație. Necesită baza de date GeoLite2 pe server.",
-  "overview.noUtm": "Nicio vizită cu taguri UTM în acest interval.",
-  "overview.noEvents": "Niciun eveniment personalizat încă. Trimite unul cu oops.track().",
-  "overview.emptyRange": "Niciun hit în acest interval.",
   "overview.emptyCta": "Deschide ghidul de instalare →",
   "overview.removeFilter": "Elimină acest filtru",
   "overview.clearFilters": "Șterge filtrele",
-  "overview.visitorsNote":
-    "Vizitatorii sunt numărați cu un hash zilnic fără cookie-uri, deci pe mai multe zile cifra este suma vizitatorilor unici zilnici.",
 
   // Events
   "events.loadFailed": "Evenimentele nu au putut fi încărcate.",
-  "events.kind": "Tip",
-  "events.allKinds": "Afișări de pagină + evenimente",
-  "events.kindPageview": "Afișare de pagină",
-  "events.kindEvent": "Eveniment",
-  "events.searchPlaceholder": "Caută cale, titlu sau eveniment…",
   "events.total": "{total} evenimente",
   "events.empty": "Niciun eveniment în acest interval.",
   "events.colTime": "Când",
-  "events.colEvent": "Eveniment",
-  "events.colLocation": "Locație",
   "events.colClient": "Dispozitiv",
-  "events.colVisitor": "Vizitator",
-  "events.title": "Titlu",
-  "events.screen": "Ecran",
-  "events.source": "Sursă",
-  "events.props": "Proprietăți",
-  "events.privacyNote":
-    "Coloana vizitator este un hash zilnic: grupează hiturile unei persoane într-o zi și nimic mai mult.",
 
   // Project settings
   "psettings.loadFailed": "Setările proiectului nu au putut fi încărcate.",
@@ -501,48 +322,16 @@ const ro: PartialCatalog = {
   "psettings.rotateFailed": "Cheia nu a putut fi rotită.",
   "psettings.purgeFailed": "Evenimentele nu au putut fi golite.",
   "psettings.installTitle": "Instalare",
-  "psettings.installBody":
-    "Adaugă scriptul în layout, pune un pixel unde nu rulează JavaScript sau trimite POST către collect API din backend.",
   "psettings.publicKey": "Cheie publică",
-  "psettings.publicKeyHint":
-    "Nu e un secret: e livrat în site-ul tău. Poate doar trimite hituri. Rotește-o dacă e abuzată sau restricționeaz-o cu hostname-urile permise de mai jos.",
   "psettings.rotate": "Rotește cheia",
   "psettings.rotateConfirm": "Rotește acum — cheia veche nu mai funcționează imediat",
-  "psettings.snippetScript": "Tag script",
-  "psettings.snippetPixel": "Pixel",
-  "psettings.snippetEvents": "Evenimente personalizate",
-  "psettings.snippetApi": "API",
-  "psettings.snippetScriptHint":
-    "Numără fiecare afișare de pagină și schimbare de rută în SPA. Atributele și JavaScript API:",
-  "psettings.snippetPixelHint":
-    "Pentru e-mailuri și README-uri. u este pagina sau lucrul pe care vrei să-l numeri; adaugă n=open pentru un eveniment cu nume. Detalii:",
-  "psettings.snippetEventsHint":
-    "Până la 2 KB de proprietăți JSON per eveniment. Apar sub Evenimente personalizate și în jurnalul de evenimente. Detalii:",
-  "psettings.snippetApiHint":
-    "Din backend, un CLI sau un cron job. Dispozitivul și locația vin din cererea însăși. Detalii:",
-  "psettings.trackingTitle": "Urmărire",
-  "psettings.trackingBody":
-    "Ce se acceptă și cum se numără zilele. Modificările se aplică de la următorul hit.",
-  "psettings.collectEnabled": "Colectează hituri",
-  "psettings.excludeBots": "Ignoră boții și browserele headless",
   "psettings.featureOff": "dezactivat global",
-  "psettings.storeIp": "Stochează adresele IP ale vizitatorilor",
-  "psettings.storeIpHint": "Oprit: se păstrează doar un hash zilnic și locația derivată. Pornit: adresa reală este salvată cu fiecare hit și apare în jurnalul de evenimente și ca defalcare.",
-  "psettings.geoOff":
-    "Căutările de locație sunt momentan dezactivate global; hiturile noi sunt stocate fără țară sau oraș.",
   "psettings.allowedOrigins": "Hostname-uri permise",
-  "psettings.allowedOriginsHint":
-    "Unul pe linie, de ex. myapp.example.com sau *.example.com. Gol = orice host. Hiturile de pe alte hosturi sunt respinse.",
   "psettings.infoTitle": "Proiect",
   "psettings.dangerTitle": "Zonă periculoasă",
   "psettings.purgeTitle": "Golește evenimentele",
-  "psettings.purgeBody":
-    "Șterge fiecare eveniment stocat al acestui proiect. Proiectul și cheia lui rămân.",
-  "psettings.purged": "{n} evenimente șterse.",
   "psettings.purge": "Golește toate evenimentele",
   "psettings.purgeConfirm": "Da, șterge fiecare eveniment",
-  "psettings.dangerBody":
-    "Ștergerea proiectului îl elimină împreună cu toate evenimentele lui. Nu se poate anula.",
   "psettings.deleteProject": "Șterge proiectul",
   "psettings.deleteProjectConfirm": "Tastează cheia proiectului pentru confirmare",
   "psettings.deleteProjectFailed": "Proiectul nu a putut fi șters.",
@@ -627,6 +416,220 @@ const ro: PartialCatalog = {
   "billing.cancelled": "Plată anulată.",
   "billing.checkoutFailed": "Plata a eșuat: {msg}",
   "billing.unknownError": "eroare necunoscută",
+  // TODO(translate): English fallbacks added by scripts/sync-i18n.ts
+  "pnav.issues": "Issues",
+  "pnav.liveEvents": "Received an error event in the last 5 minutes",
+  "pnav.openIssues": "{n} open",
+  "pnav.openIssuesHint": "Open issues",
+  "landing.badgeErrors": "Open source · MIT · Self-hostable · 4 KB SDK",
+  "landing.heroTitleErrors": "Catch and fix the errors",
+  "landing.heroTitleAccentErrors": "your apps throw",
+  "landing.heroBodyErrors": "oops collects the errors from your browsers, servers, scripts and AI agents, groups them into issues, and tells you how many users each one affects, in which release and in which environment — with the stack trace and the clicks that led there. Resolve them from the dashboard, the API or an MCP client.",
+  "landing.freeNoteErrors": "Free plan: {projects} projects & {events} error events / month. No card required.",
+  "landing.pathsTitleErrors": "Three ways to report",
+  "landing.pathsBodyErrors": "Pick the one that fits each app. They all land in the same inbox.",
+  "landing.pathSdkTitle": "Browser SDK",
+  "landing.pathSdkBody": "One script tag, under 4 KB, no dependencies. Catches uncaught errors and unhandled promise rejections, records clicks, route changes and failed requests as breadcrumbs, and exposes oops.capture() for the errors you catch yourself. Never throws into your page.",
+  "landing.pathIngestTitle": "Ingest API",
+  "landing.pathIngestBody": "A single POST with the project's public key, from Python, Node, Go, a CLI or a cron job. Send frames or the raw stack string — V8, Firefox and Python tracebacks are parsed server-side. Always answers 202: a failing app never gets a second error back.",
+  "landing.pathAgentTitle": "AI agents via MCP",
+  "landing.pathAgentBody": "The MCP server lets Claude Code, Claude Desktop, Cursor or any MCP host read, triage and resolve issues — and report an agent's own failures into a project with report_error.",
+  "landing.step1BodyErrors": "One project per app, site or service. You get a public key for the SDK and the ingest API, and you pick its time zone.",
+  "landing.step2TitleErrors": "2. Report an error",
+  "landing.step2BodyErrors": "Paste the script tag, or POST one JSON object from your backend. The server scrubs secrets, parses the stack and groups the event into an issue by fingerprint.",
+  "landing.step3TitleErrors": "3. Triage the inbox",
+  "landing.step3BodyErrors": "Open issues sorted by last seen, with events, affected users, environments and releases. Resolve, ignore, reopen — one by one or in bulk, from the dashboard, the API or an AI agent.",
+  "landing.seeTitleErrors": "Everything you need to fix it, nothing you don't",
+  "landing.seeBodyErrors": "The dashboard answers the questions you actually ask when something breaks, and stops there.",
+  "landing.seeGroupTitle": "Grouped by fingerprint.",
+  "landing.seeGroupBody": "'User 42 not found' and 'User 43 not found' are one issue; the same error from another function is another. Send your own fingerprint to override.",
+  "landing.seeUsersTitle": "Affected users.",
+  "landing.seeUsersBody": "Not just how many times, but how many people — by the user id you send, or a daily cookie-less hash when you don't.",
+  "landing.seeReleasesTitle": "Releases and environments.",
+  "landing.seeReleasesBody": "Every issue lists where it happens. Resolved issues reopen on the next event and get a regressed badge.",
+  "landing.seeCrumbsTitle": "Breadcrumbs.",
+  "landing.seeCrumbsBody": "The last 30 clicks, route changes, failed requests and console messages before the error, with the stack frames and tags next to them.",
+  "landing.privacyTitleErrors": "Careful with data by construction",
+  "landing.privacyBodyErrors": "Error payloads carry whatever your code had in scope, so the server cleans them before storage: secret-looking keys are filtered, query strings and fragments are dropped from URLs, the user agent is reduced to browser, OS and device and thrown away, and IP addresses are hashed unless a project opts in to keep them.",
+  "landing.privacyScrub": "Keys named password, token, secret, authorization, cookie, api_key, card, cvv or ssn are replaced by [Filtered] in tags, extra, breadcrumbs and user objects",
+  "landing.privacyUa": "No raw user agents stored — only browser, OS and device",
+  "landing.privacyIp": "Raw IP addresses are not stored by default — only a daily salted hash (a per-project switch keeps them if you need to)",
+  "landing.privacyCookies": "The SDK sets no cookie and writes nothing to the browser",
+  "landing.apiNoteErrors": "Public keys can only report. They can never read anything, and they can be rotated at any time.",
+  "landing.mcpTitleErrors": "Let your AI agent triage the inbox",
+  "landing.mcpExampleRelease": "“what broke after the 1.4 release?”",
+  "landing.mcpExampleTriage": "“triage the checkout errors and resolve the ones already fixed”",
+  "landing.mcpTriageTitle": "A triage prompt.",
+  "landing.mcpTriageBody": "The server ships a triage prompt that summarises a project's open issues — new vs regressed, most users affected, by environment — and proposes what to fix, resolve or ignore first.",
+  "landing.mcpBullet2BodyErrors": "Destructive actions (delete a project, purge its events and issues) ask you to confirm before anything happens.",
+  "landing.selfhostBody1Errors": "The entire stack — Flask API, browser SDK, MCP server and this Qwik app — is MIT-licensed. Run it on your own VPS with one",
+  "landing.ctaTitleErrors": "See your first error in a minute",
+  "landing.ctaBodyErrors": "Create a project, paste one script tag and throw something on purpose. It lands in the inbox in a second.",
+  "info.docsBodyErrors": "Browser SDK guide, ingest API fields, grouping rules, REST and MCP reference, limits.",
+  "pricing.introErrors": "Start free. Upgrade when you need more projects, more error events per month or longer retention. Self-host for unlimited everything.",
+  "pricing.earlyBodyErrors": "Unlimited projects, error events and retention, the API and the MCP server. When plans arrive we will announce it on the blog and by email before any limit applies to an existing account. Prices and limits below may still change.",
+  "pricing.footnoteErrors": "All prices in USD. Annual billing saves ~20%. Project and key counts are hard limits; error events over the monthly budget are counted but not stored, and your app never gets an error back. Events older than the retention window are pruned.",
+  "docs.introErrors": "How to put oops in your app, report errors from anywhere, and read or triage the issues through the REST API or an AI agent. The full contract — every endpoint, object and rule — lives in the repository.",
+  "docs.sdkTitle": "Browser SDK",
+  "docs.sdkBody": "A zero-dependency script under 4 KB gzipped, served from this host at /o.js (also /o/v1.js). Add it once in your layout: it captures window.onerror and unhandledrejection, keeps the last 30 breadcrumbs (clicks, SPA route changes, failed fetch / XHR calls) and posts events with sendBeacon. It never throws into your page, drops identical events within 2 s, sends at most 30 events per minute and skips localhost pages unless told otherwise.",
+  "docs.sdkAttrsTitle": "Attributes (defaults shown)",
+  "docs.attrEnvRelease": "environment and release labels stamped on every event (environment defaults to production).",
+  "docs.attrConsole": "also capture console.error calls as events, and console.warn / console.error as breadcrumbs.",
+  "docs.attrLocalErrors": "also report from localhost, raw IPs and file: pages (skipped by default).",
+  "docs.attrSample": "fraction of error events sent (0–1). Captured messages and explicit capture() calls always go through.",
+  "docs.attrUser": "initial user as JSON ({ id, email, name }); same as calling oops.setUser().",
+  "docs.attrApiErrors": "override the ingest endpoint (self-hosted instances behind another host).",
+  "docs.sdkJsTitle": "JavaScript API",
+  "docs.sdkJsBody": "window.oops exposes capture, message, setUser, setTag / setTags, setContext, breadcrumb and flush. Calls queued in window.oops.q before the script loads are replayed.",
+  "docs.sdkWhat": "What is sent: type, message, the stack (parsed into frames), level, URL without its query string, release, environment, platform, the user you set, tags, extra and the breadcrumb buffer. Browser, OS and device are derived on the server from the request and the user agent is discarded.",
+  "docs.ingestTitle": "Ingest API",
+  "docs.ingestBody": "POST /api/ingest (or /api/ingest/event) with the project's public key in the X-Project-Key header or a k field. JSON, form-encoded and text/plain bodies are accepted, CORS is open, bodies are capped at 64 KB, and the answer is 202 whenever the key is valid — paused projects, blocked origins and exceeded budgets return ok:false rather than an error, so a failing app never fails a second time.",
+  "docs.ingestField1": "type and message: the exception class / error name and its message. At least one is required.",
+  "docs.ingestField2": "level: fatal | error | warning | info (default error). environment (default production) and release are free-text labels used as filters.",
+  "docs.ingestField3": "frames (top of the stack first; filename, function, lineno, colno, in_app) or stack: a raw string parsed server-side (V8, Firefox / Safari and Python traceback formats).",
+  "docs.ingestField4": "url (query and fragment dropped), platform (javascript, python, node, …), sdk, user ({ id, email, name }), tags (≤ 20 pairs), extra (≤ 8 KB JSON).",
+  "docs.ingestField5": "breadcrumbs: up to 30 of { ts, category, message, level, data }; the last 30 are kept.",
+  "docs.ingestField6": "fingerprint: up to 5 strings that fully replace the automatic grouping. ts: optional client timestamp (server time if missing or more than 5 minutes off).",
+  "docs.ingestResponsesTitle": "Responses",
+  "docs.ingestResponses": "Stored events return the event id and the issue they landed in. Dropped events say why: paused (ingest switched off for the project), origin (allowed hostnames set and the page / Origin host is not in them) or limit (over the monthly budget — counted, not stored). Malformed payloads are 400, a bad key is 401.",
+  "docs.ingestBatchTitle": "Batches",
+  "docs.groupingTitle": "Grouping rules",
+  "docs.groupingBody": "Every event lands in exactly one issue, keyed by a fingerprint:",
+  "docs.groupingRule1": "If the event carries a fingerprint array, that wins — use it to group by business meaning (['checkout', 'pay-failed']).",
+  "docs.groupingRule2": "Otherwise the fingerprint is type + normalised message + top in-app frame (filename without query string + function). Normalisation replaces runs of digits, hex blobs ≥ 8 chars, UUIDs and quoted strings with placeholders and truncates to 200 chars.",
+  "docs.groupingRule3": "A resolved issue that receives a new event reopens and is marked regressed. An ignored issue stays ignored but keeps counting.",
+  "docs.groupingRule4": "Affected users = distinct user hashes: your user.id (hashed per project) when you send one, otherwise a daily cookie-less hash of IP and user agent.",
+  "docs.authPublicKeyErrors": "Ingest API and SDK: project public keys. Header X-Project-Key: oops_pub_… (or the k field). They identify one project, can only report, and can be rotated at any time.",
+  "docs.projectsBodyErrors": "A project is one app, site or service. It owns a public key, a time zone (used to bucket days), an optional list of allowed hostnames, the ingest switch and the store-IP switch.",
+  "docs.issuesTitle": "Issues and events",
+  "docs.issuesBody": "Issues are paged (per_page ≤ 100) and default to the open ones seen in the last 30 days, most recent first. An issue is addressed by its uuid or its per-project number. Bulk updates take up to 100 ids. Events are the raw occurrences, newest first, across one issue or the whole project.",
+  "docs.statsBodyErrors": "period=today|yesterday|24h|7d|30d|90d|12mo or from/to (dates in the project time zone); interval hour | day | month is chosen automatically. level, environment and release filter everything in the answer: totals and the previous period of the same length, the time series, and the top-10 breakdowns.",
+  "docs.dimensionsBodyErrors": "Returned as breakdowns by GET /stats. level, environment and release are also accepted as filters on the issues, events and stats endpoints.",
+  "docs.limitsTitle": "Errors, limits and privacy",
+  "docs.errorsBodyErrors": "Errors are JSON: { \"error\": { \"code\", \"message\" } }. A missing scope is 403 insufficient_scope. Creating past a plan limit answers 402 limit_reached with error.which = projects | api_keys. Events over the monthly budget are accepted (202) but not stored, and counted as dropped in /account/usage.",
+  "docs.capsBody": "Payload caps: type ≤ 200, message ≤ 4096, frames ≤ 50, stack ≤ 16 KB, tags ≤ 20 pairs (key ≤ 40, value ≤ 200), extra ≤ 8 KB, breadcrumbs ≤ 30 / 8 KB, fingerprint ≤ 5 × 100, environment ≤ 40, release ≤ 100. Request bodies ≤ 64 KB; a batch holds ≤ 20 events.",
+  "docs.plansBody": "Free plan: {projects} projects, {events} events per month and {days} days of retention; events older than the plan's window are pruned, and issues left with no events disappear with them.",
+  "docs.privacyBodyErrors": "Privacy: keys matching password, passwd, secret, token, authorization, cookie, api_key, card, cvv or ssn are replaced by [Filtered] in tags, extra, breadcrumbs and user; bearer tokens and card numbers inside the message too. URLs lose query string and fragment. The user agent is reduced to browser / OS / device and discarded. IPs are hashed with a daily salt unless the project sets store_ip.",
+  "docs.mcpBodyErrors": "The MCP server (npm oops-errors-mcp, or Streamable HTTP at /mcp) exposes the management API as tools, filtered by the role of the key you connect with and re-checked on every call. Destructive tools ask for confirmation. report_error lets an agent post an event into a project it can see.",
+  "docs.mcpPrompt": "Prompt triage (project, period?): summarises the open issues of a project — new vs regressed, most users affected, by environment — and proposes what to fix, resolve or ignore first.",
+  "docs.colTool": "Tool",
+  "building.bodyErrors": "Error tracking for your apps. The site isn't open yet — but the SDK, the ingest API and the MCP server keep answering just fine.",
+  "period.24h": "24 hours",
+  "period.all": "All time",
+  "metric.users": "Affected users",
+  "dim.level": "Levels",
+  "dim.environment": "Environments",
+  "dim.release": "Releases",
+  "dim.type": "Error types",
+  "dim.none": "(none)",
+  "level.fatal": "Fatal",
+  "level.error": "Error",
+  "level.warning": "Warning",
+  "level.info": "Info",
+  "status.open": "Open",
+  "status.resolved": "Resolved",
+  "status.ignored": "Ignored",
+  "status.all": "All",
+  "sort.last_seen": "Last seen",
+  "sort.first_seen": "First seen",
+  "sort.events": "Most events",
+  "sort.users": "Most users",
+  "dash.usageIngestHint": "Error events received by the ingest API this calendar month.",
+  "dash.emptyIssues": "No projects yet. Create one per app, site or service to get its public key and SDK snippet.",
+  "dash.openIssues": "open issues",
+  "dash.events24h": "events · 24h",
+  "dash.events30d": "events · 30d",
+  "dash.lastEvent": "Last event {when}",
+  "dash.noEventsYet": "No events yet",
+  "inbox.loadFailed": "Failed to load issues.",
+  "inbox.bulkFailed": "Could not update the selected issues.",
+  "inbox.bulkDone": "Updated {n} issues.",
+  "inbox.allLevels": "All levels",
+  "inbox.allEnvironments": "All environments",
+  "inbox.allReleases": "All releases",
+  "inbox.searchPlaceholder": "Search title, culprit or type…",
+  "inbox.liveNow": "{n} events in the last minutes",
+  "inbox.liveHint": "Error events received in the last few minutes",
+  "inbox.showStats": "Show stats",
+  "inbox.hideStats": "Hide stats",
+  "inbox.newIssues": "New issues",
+  "inbox.openIssues": "Open issues",
+  "inbox.emptyRange": "No events in this range.",
+  "inbox.sortBy": "Sort by",
+  "inbox.selected": "{n} selected",
+  "inbox.clearSelection": "Clear selection",
+  "inbox.selectAll": "Select every issue on this page",
+  "inbox.colIssue": "Issue",
+  "inbox.colFirstSeen": "First seen",
+  "inbox.colLastSeen": "Last seen",
+  "inbox.emptyNoEvents": "No errors reported yet. Install the SDK or post to the ingest API, then throw something on purpose.",
+  "inbox.emptyOpen": "Inbox zero: no open issues in this period.",
+  "inbox.emptyFiltered": "No issues match these filters.",
+  "inbox.usersNote": "Affected users are distinct user ids when your app sends them, otherwise a cookie-less daily hash — so across several days anonymous users are summed per day.",
+  "issue.back": "← All issues",
+  "issue.loadFailed": "Failed to load the issue.",
+  "issue.updateFailed": "Could not update the issue.",
+  "issue.resolve": "Resolve",
+  "issue.ignore": "Ignore",
+  "issue.reopen": "Reopen",
+  "issue.regressed": "Regressed",
+  "issue.regressedHint": "Resolved earlier, then seen again",
+  "issue.regressedAt": "Regressed {when}",
+  "issue.resolvedAt": "Resolved {when}",
+  "issue.latestEvent": "Latest event",
+  "issue.selectedEvent": "Selected event",
+  "issue.backToLatest": "Back to latest",
+  "issue.noEvent": "No events stored for this issue.",
+  "issue.occurrences": "{n} occurrences",
+  "issue.allEventsLink": "All events of this issue",
+  "issue.stackTitle": "Stack trace",
+  "issue.noStack": "No stack trace was sent with this event.",
+  "issue.frameIn": "in",
+  "issue.inApp": "in app",
+  "issue.hiddenFrames": "{n} framework / vendor frames hidden — show",
+  "issue.expandFrames": "Show all frames",
+  "issue.collapseFrames": "Collapse vendor frames",
+  "issue.showRaw": "Show raw stack",
+  "issue.hideRaw": "Hide raw stack",
+  "issue.contextTitle": "Context",
+  "issue.url": "URL",
+  "issue.platform": "Platform",
+  "issue.sdk": "SDK",
+  "issue.userTitle": "User",
+  "issue.anonymousUser": "Anonymous (no user id sent)",
+  "issue.userHashHint": "User hash: distinct values are counted as affected users",
+  "issue.tagsTitle": "Tags",
+  "issue.extraTitle": "Extra",
+  "issue.breadcrumbsTitle": "Breadcrumbs",
+  "issue.noBreadcrumbs": "No breadcrumbs were sent with this event.",
+  "issue.crumbData": "data",
+  "issue.crumbError": "Error",
+  "events.searchMessages": "Search messages…",
+  "events.colError": "Error",
+  "events.colIssue": "Issue",
+  "events.colUser": "User",
+  "events.openIssue": "Open issue #{n}",
+  "events.issueFilter": "One issue",
+  "events.privacyNoteErrors": "Anonymous users are a daily hash of IP and user agent: it groups one person's events within a day and nothing more. Raw IPs appear only if the project stores them.",
+  "psettings.installBodyErrors": "Add the SDK to your pages, or post to the ingest API from any backend, script or agent. Every snippet below already carries this project's key.",
+  "psettings.publicKeyHintErrors": "Not a secret: it ships inside your app. It can only report errors, never read anything. Rotate it if it gets abused, or restrict it with the allowed hostnames below.",
+  "psettings.snippetSdk": "Script tag",
+  "psettings.snippetCapture": "JavaScript API",
+  "psettings.snippetSdkHint": "Catches uncaught errors and unhandled rejections, records breadcrumbs, under 4 KB. data-env and data-release label every event. Attributes and the API:",
+  "psettings.snippetCaptureHint": "For the errors you catch yourself, the user behind them, and your own breadcrumbs. Details:",
+  "psettings.snippetCurlHint": "One JSON object per error. Send frames or the raw stack string; the server parses V8, Firefox and Python formats. Details:",
+  "psettings.snippetPythonHint": "Wrap your handlers or hook sys.excepthook. Mark site-packages frames as not in_app so grouping uses your own code. Details:",
+  "psettings.snippetNodeHint": "Hook uncaughtException and unhandledRejection, or call report() from your own catch blocks. Details:",
+  "psettings.ingestTitle": "Ingest",
+  "psettings.ingestBody": "What is accepted and how days are counted. Changes apply to the next event.",
+  "psettings.ingestEnabled": "Accept events",
+  "psettings.ingestEnabledHint": "Off: every report is dropped with ok:false, reason paused. The snippet keeps working.",
+  "psettings.storeIpErrors": "Store IP addresses",
+  "psettings.storeIpHintErrors": "Off: only a daily salted hash is kept, for rate limits and anonymous user counts. On: the raw address is saved with every event and shown in its details.",
+  "psettings.allowedOriginsHintErrors": "One per line, e.g. myapp.example.com. Empty = any host. Events whose page or Origin host is not listed are dropped with reason origin.",
+  "psettings.purgeBodyErrors": "Deletes every stored event and issue of this project. The project and its key stay.",
+  "psettings.purgedErrors": "Deleted {events} events and {issues} issues.",
+  "psettings.dangerBodyErrors": "Deleting the project removes it with all its issues and events. This cannot be undone.",
 };
 
 export default ro;

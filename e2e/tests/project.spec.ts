@@ -1,87 +1,121 @@
 import { test, expect } from "@playwright/test";
-import { API_URL, collect, jwtHeaders, registerAccount, seedSession, uniqueName } from "../helpers";
+import {
+  call,
+  createProject,
+  getProject,
+  ingest,
+  ingestOk,
+  listEvents,
+  listIssues,
+  patchProject,
+  registerAccount,
+  summary,
+  uniqueName,
+} from "../helpers";
 
 /**
- * Create a project in the dashboard → its settings show the public key and the
- * install snippet → hits appear on the overview with the chart, KPI tiles and
- * breakdowns → filters work.
+ * Project lifecycle through the API: create → read → settings → rotate the
+ * public key (old one dies at once) → delete (cascades issues and events).
  */
 test.describe("projects", () => {
-  test("@critical create a project, read its public key, see hits on the overview", async ({ page, request }) => {
+  test("@critical create, update settings, rotate the key, old key is 401, delete cascades", async ({ request }) => {
     const account = await registerAccount(request);
-    await seedSession(page, account);
-    const name = uniqueName();
+    const name = uniqueName("E2E Shop");
+    const project = await createProject(request, account, {
+      name,
+      url: "https://shop.example",
+      description: "Checkout front-end",
+      timezone: "Europe/Madrid",
+      allowed_origins: ["shop.example"],
+    });
+    expect(project.name).toBe(name);
+    expect(project.key).toMatch(/^[a-z0-9-]{1,63}$/);
+    expect(project.public_key).toMatch(/^oops_pub_/);
+    expect(project.public_key.startsWith(project.public_key_prefix)).toBe(true);
+    expect(project.timezone).toBe("Europe/Madrid");
+    expect(project.allowed_origins).toEqual(["shop.example"]);
+    expect(project.ingest_enabled).toBe(true);
+    expect(project.store_ip).toBe(false);
+    expect(project.counts.open_issues).toBe(0);
+    expect(project.counts.events_24h).toBe(0);
 
-    await page.goto("/dashboard");
-    await page.getByRole("button", { name: /new project/i }).click();
-    await page.getByLabel(/project name/i).fill(name);
-    await page.getByRole("button", { name: /^create/i }).click();
+    // Listed newest first, readable by id.
+    const list = await call(request, "get", "/projects", account);
+    expect(list.status).toBe(200);
+    expect(list.body.items[0].id).toBe(project.id);
+    expect((await getProject(request, account, project.id)).public_key).toBe(project.public_key);
 
-    // Lands on settings: public key + snippet with the real key.
-    await expect(page).toHaveURL(/\/dashboard\/projects\/[0-9a-f-]+\/settings/);
-    const key = page.locator("[data-public-key]");
-    await expect(key).toBeVisible();
-    const publicKey = (await key.getAttribute("data-public-key")) ?? "";
-    expect(publicKey).toMatch(/^oops_pub_/);
-    await expect(page.getByTestId("snippet")).toContainText("m.js");
-    await expect(page.getByTestId("snippet")).toContainText(publicKey);
+    // Settings.
+    const patched = await patchProject(request, account, project.id, {
+      name: `${name} v2`,
+      description: "Renamed",
+      allowed_origins: [],
+      timezone: "UTC",
+      ingest_enabled: false,
+    });
+    expect(patched.name).toBe(`${name} v2`);
+    expect(patched.description).toBe("Renamed");
+    expect(patched.allowed_origins).toEqual([]);
+    expect(patched.timezone).toBe("UTC");
+    expect(patched.ingest_enabled).toBe(false);
+    const paused = await ingest(request, project.public_key, { type: "Error", message: "while paused" });
+    expect(paused.status).toBe(202);
+    expect(paused.body).toEqual({ ok: false, reason: "paused" });
+    await patchProject(request, account, project.id, { ingest_enabled: true });
 
-    // Send a few hits through the API and look at the overview.
-    const projectId = page.url().match(/projects\/([0-9a-f-]+)/)![1]!;
-    for (const u of ["https://site.example/", "https://site.example/docs", "https://site.example/docs"]) {
-      expect((await collect(request, publicKey, { u })).body.ok).toBe(true);
-    }
-    await page.goto(`/dashboard/projects/${projectId}`);
-    await expect(page.getByTestId("kpis")).toBeVisible();
-    await expect(page.getByTestId("kpis")).toContainText("3"); // page views
-    await expect(page.getByRole("img", { name: /page views/i })).toBeVisible(); // the chart
-    await expect(page.locator("[data-breakdown='path']")).toContainText("/docs");
-    await expect(page.getByTestId("live-visitors")).toContainText("1");
+    // One event shows up in the counts.
+    const first = await ingestOk(request, project.public_key, { type: "TypeError", message: "checkout exploded", url: "https://shop.example/pay" });
+    expect(first.issue_number).toBe(1);
+    const afterOne = await getProject(request, account, project.id);
+    expect(afterOne.counts.open_issues).toBe(1);
+    expect(afterOne.counts.events_24h).toBe(1);
+    expect(afterOne.counts.events_30d).toBe(1);
+    expect(afterOne.counts.last_event_at).toBeTruthy();
+    const sum = await summary(request, account, project.id);
+    expect(sum.open_issues).toBe(1);
+    expect(sum.events_24h).toBe(1);
 
-    // Clicking a page filters the whole overview.
-    await page.locator("[data-breakdown='path']").getByRole("button", { name: /\/docs/ }).click();
-    await expect(page.getByTestId("active-filters")).toContainText("/docs");
-    await expect(page.getByTestId("kpis")).toContainText("2");
+    // Rotate: the old key stops at once, the new one works, data is kept.
+    const rotated = await call(request, "post", `/projects/${project.id}/rotate-key`, account);
+    expect(rotated.status, JSON.stringify(rotated.body)).toBe(200);
+    const newKey: string = rotated.body.public_key;
+    expect(newKey).toMatch(/^oops_pub_/);
+    expect(newKey).not.toBe(project.public_key);
+    expect(rotated.body.public_key_prefix).not.toBe(project.public_key_prefix);
+    const old = await ingest(request, project.public_key, { type: "Error", message: "old key" });
+    expect(old.status).toBe(401);
+    expect((old.body as any).error.code).toBe("invalid_project_key");
+    await ingestOk(request, newKey, { type: "TypeError", message: "checkout exploded" });
+    expect((await listIssues(request, account, project.id)).total).toBe(1);
+    expect((await listEvents(request, account, project.id)).total).toBe(2);
 
-    // The API agrees.
-    const res = await request.get(`${API_URL}/projects/${projectId}`, { headers: jwtHeaders(account) });
-    expect(res.status()).toBe(200);
-    const project = await res.json();
-    expect(project.public_key).toBe(publicKey);
-    expect(project.counts.pageviews_30d).toBe(3);
+    // store_ip keeps the raw address on new events only.
+    await patchProject(request, account, project.id, { store_ip: true });
+    const withIp = await ingestOk(request, newKey, { type: "Error", message: "with ip" });
+    const rows = (await listEvents(request, account, project.id)).items;
+    expect(rows.find((e) => e.id === withIp.event_id)!.ip).toMatch(/^[0-9a-f.:]+$/);
+    expect(rows.find((e) => e.id === first.event_id)!.ip ?? null).toBeNull();
+
+    // Delete cascades; the key is gone too.
+    const del = await call(request, "delete", `/projects/${project.id}`, account);
+    expect(del.status).toBe(204);
+    expect((await call(request, "get", `/projects/${project.id}`, account)).status).toBe(404);
+    expect((await ingest(request, newKey, { type: "Error", message: "after delete" })).status).toBe(401);
   });
 
-  test("a project of another account is a 404, never a 403", async ({ request }) => {
+  test("an explicit key slug is honoured; a project of another account is a 404, never a 403", async ({ request }) => {
     const owner = await registerAccount(request);
     const other = await registerAccount(request);
-    const created = await request.post(`${API_URL}/projects`, { headers: jwtHeaders(owner), data: { name: uniqueName() } });
-    expect(created.status()).toBe(201);
-    const { id } = await created.json();
-    const res = await request.get(`${API_URL}/projects/${id}`, { headers: jwtHeaders(other) });
-    expect(res.status()).toBe(404);
-    const st = await request.get(`${API_URL}/projects/${id}/stats`, { headers: jwtHeaders(other) });
-    expect(st.status()).toBe(404);
-  });
+    const slug = `custom-${Date.now().toString(36)}`;
+    const project = await createProject(request, owner, { key: slug });
+    expect(project.key).toBe(slug);
 
-  test("API keys: viewer can read stats but not change the project; events page lists hits", async ({ page, request }) => {
-    const account = await registerAccount(request);
-    const created = await request.post(`${API_URL}/projects`, { headers: jwtHeaders(account), data: { name: uniqueName() } });
-    const project = await created.json();
-    await collect(request, project.public_key, { u: "https://site.example/hello", n: "wave", p: { hi: true } });
-
-    const viewer = await request.post(`${API_URL}/apikeys`, { headers: jwtHeaders(account), data: { name: "ro", role: "viewer" } });
-    expect(viewer.status()).toBe(201);
-    const { key } = await viewer.json();
-    const st = await request.get(`${API_URL}/projects/${project.id}/stats?period=today`, { headers: { "X-API-Key": key } });
-    expect(st.status()).toBe(200);
-    expect((await st.json()).totals.events).toBe(1);
-    const denied = await request.patch(`${API_URL}/projects/${project.id}`, { headers: { "X-API-Key": key }, data: { name: "x" } });
-    expect(denied.status()).toBe(403);
-    expect((await denied.json()).error.code).toBe("insufficient_scope");
-
-    await seedSession(page, account);
-    await page.goto(`/dashboard/projects/${project.id}/events`);
-    await expect(page.getByTestId("events-table")).toContainText("/hello");
-    await expect(page.getByTestId("events-table")).toContainText("wave");
+    expect((await call(request, "get", `/projects/${project.id}`, other)).status).toBe(404);
+    expect((await call(request, "get", `/projects/${project.id}/issues`, other)).status).toBe(404);
+    expect((await call(request, "get", `/projects/${project.id}/stats`, other)).status).toBe(404);
+    expect((await call(request, "patch", `/projects/${project.id}`, other, { data: { name: "x" } })).status).toBe(404);
+    expect((await call(request, "delete", `/projects/${project.id}`, other)).status).toBe(404);
+    // Still there for the owner.
+    expect((await getProject(request, owner, project.id)).id).toBe(project.id);
   });
 });

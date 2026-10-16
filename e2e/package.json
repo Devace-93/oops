@@ -2,7 +2,7 @@
   "name": "oops-e2e",
   "private": true,
   "version": "0.0.0",
-  "description": "Playwright end-to-end suite for the oops stack (web + API + tracker).",
+  "description": "Playwright end-to-end suite for the oops stack (web + API + browser SDK).",
   "type": "module",
   "scripts": {
     "test": "playwright test",

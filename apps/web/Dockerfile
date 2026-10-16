@@ -1,7 +1,8 @@
 # oops web (Qwik City SSR on Bun).
 #
 # Build context is the REPO ROOT (`/home/enrique/oops`), because the app
-# imports the shared plan-limits JSON from packages/shared.
+# imports the shared plan-limits / roles / feature JSON from packages/shared
+# and bundles the browser SDK from packages/sdk.
 #
 #   docker build -f apps/web/Dockerfile -t oops-web .
 #
@@ -12,14 +13,16 @@
 FROM oven/bun:1 AS build
 WORKDIR /repo
 
-# Shared package (single source of truth for plan limits) is imported by the app.
+# Shared package (single source of truth for plan limits, API-key roles and
+# feature switches) is imported by the app.
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
-# Tracker script: bundled into apps/web/public so the web service serves it at
-# /m.js and /m/v1.js (static files, see CONTRACT.md → Tracker contract).
-COPY packages/tracker ./packages/tracker
-WORKDIR /repo/packages/tracker
+# Browser SDK: built into apps/web/public so the web service serves it at
+# /o.js and /o/v1.js (static files, ≤ 4 KB gzipped — see CONTRACT.md → Browser
+# SDK). Caddy adds the cache / CORS headers in front.
+COPY packages/sdk ./packages/sdk
+WORKDIR /repo/packages/sdk
 RUN bun install --frozen-lockfile || bun install
 RUN bun run build
 
@@ -30,6 +33,8 @@ RUN bun install --frozen-lockfile || bun install
 # present during `bun run build` (passed via compose build.args from .env). All
 # optional — the app degrades gracefully when unset: PostHog no-ops, and the
 # billing page shows a "not configured" notice instead of launching checkout.
+# VITE_METRICS_*: oops itself is tracked by metrics.3m4.net (web analytics);
+# unrelated to the oops brand, keep them.
 ARG VITE_API_URL=/api
 ARG VITE_APP_URL
 ARG VITE_POSTHOG_KEY
@@ -58,7 +63,7 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000
 
-# Built SSR server + client assets + deps.
+# Built SSR server + client assets (dist/ includes public/, so o.js ships) + deps.
 COPY --from=build /repo/apps/web/server ./server
 COPY --from=build /repo/apps/web/dist ./dist
 COPY --from=build /repo/apps/web/node_modules ./node_modules

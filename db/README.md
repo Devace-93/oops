@@ -12,8 +12,8 @@ python -m dbcore.cli upgrade   # create_all (idempotent) + alembic upgrade head
 ```
 
 `migrations/versions/0001_initial.py` holds the full initial schema (accounts,
-users, memberships, refresh tokens, subscriptions, projects, events, usage
-counters, API keys, webhook events, audit events). It is written to be safe after
+users, memberships, refresh tokens, subscriptions, projects, issues,
+issue_users, events, usage counters, API keys, webhook events, audit events). It is written to be safe after
 `create_all`: every `create_table` is skipped when the table already exists.
 
 ## Future migrations (Alembic)

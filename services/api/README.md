@@ -1,9 +1,9 @@
 # oops — API service (Flask)
 
-JSON REST API for oops, the web-analytics service. Auth, projects (one per
-tracked site) with their public keys, the public collect API (tracker / pixel /
-curl), the stats endpoints, account usage, API keys, and (optionally)
-RevenueCat billing. Mounted at `/api` behind Caddy.
+JSON REST API for oops, the error-tracking service. Auth, projects (one per
+app, site or service) with their public keys, the public ingest API (browser
+SDK / curl / backends), issues and events, the stats endpoints, account usage,
+API keys, and (optionally) RevenueCat billing. Mounted at `/api` behind Caddy.
 The spec is the repo-root `CONTRACT.md`.
 
 ## Layout
@@ -17,32 +17,40 @@ services/api/
 │   ├── features.py         # oops's own switches: @require_feature + GET /api/features
 │   ├── serializers.py      # ORM -> JSON (CONTRACT.md shapes)
 │   ├── errors.py           # ApiError -> {"error": {...}}
-│   └── blueprints/         # auth, projects, stats, collect, account, apikeys, billing
+│   └── blueprints/         # auth, projects, issues, ingest, account, apikeys, billing
 ├── scripts/smoke.sh        # curl walk through the contract against a running stack
+├── tests/                  # unit tests for the pure dbcore modules (stack parser, grouping, scrubbing)
 ├── requirements.txt
 └── Dockerfile
 ```
 
-Shared logic (config, models, plans, RBAC, key validation, hit normalisation and
-enrichment, stats queries, IP hashing, usage, audit, PostHog) lives in the
-repo-root `dbcore/` package and is imported, never re-implemented.
+Shared logic (config, models, plans, RBAC, key validation, the ingest pipeline,
+grouping, stats queries, hashing, usage, audit, PostHog) lives in the repo-root
+`dbcore/` package and is imported, never re-implemented:
+
+- `dbcore/ingest.py` — payload normalisation, caps and scrubbing; user-agent parsing
+- `dbcore/stacktrace.py` — V8 / Firefox-Safari / Python stack parsing into frames
+- `dbcore/grouping.py` — message normalisation, fingerprint, issue title and culprit
+- `dbcore/issues.py` — the issue upsert (one transaction per event, race-safe)
+- `dbcore/stats.py` — totals, series, breakdowns, live window, project counts
 
 ## Auth
 
 - **Dashboard:** `Authorization: Bearer <JWT>` (HS256, TTL `ACCESS_TOKEN_TTL_MIN`).
-  Refresh tokens are opaque and stored **hashed** (sha256). Passwords: argon2.
+  Refresh tokens are opaque, stored **hashed** (sha256) and rotated on every
+  refresh. Passwords: argon2.
 - **Management API:** `X-API-Key: oops_live_...` (or as a bearer token); the
   key's role decides its scopes (`packages/shared/api_key_roles.json`).
-- **Collect API:** `X-Project-Key: oops_pub_...` (or bearer token, or the
-  `k` / `project_key` body/query field). Identifies one project; no role,
-  collect routes only. Public by design (it ships in the tracker snippet).
+- **Ingest API:** `X-Project-Key: oops_pub_...` (or bearer token, or the
+  `k` / `project_key` body field). Identifies one project; no role, ingest
+  routes only. Public by design (it ships in the SDK snippet).
 
 ## Endpoints (all under `/api`)
 
 - `auth`: `register`, `login`, `refresh`, `logout`, `me`
 - `projects`: list/create/get/patch/delete, `:id/rotate-key`, `:id/summary`, `DELETE :id/events` (purge)
-- `projects/:id/stats`, `stats/breakdown`, `stats/series`, `events`, `live` (stats:read)
-- `collect` (POST, metered, project public key, CORS `*`), `collect/pixel.gif`
+- `projects/:id/issues` (list, get, patch, `bulk`, `:issue/events`), `events`, `events/:id`, `stats`, `live` (issues:*)
+- `ingest`, `ingest/event`, `ingest/batch` (POST, metered, project public key, CORS `*`, `text/plain` accepted)
 - `account/usage`, `account/audit`
 - `apikeys`: list/create/delete, `roles`, `me`
 - `features`
@@ -58,6 +66,9 @@ docker compose --env-file .env -f deploy/docker-compose.yml up -d --build postgr
 # Locally (needs Postgres + Redis reachable, deps installed):
 pip install -r services/api/requirements.txt
 gunicorn -b 0.0.0.0:5000 -w 2 'api.app:create_app()'
+
+# Unit tests (pure Python, no services needed):
+python3 -m unittest discover -s services/api/tests
 ```
 
 Configuration is entirely env-driven (`dbcore.config`); see the repo `.env.example`.
@@ -65,16 +76,20 @@ Configuration is entirely env-driven (`dbcore.config`); see the repo `.env.examp
 ## Limits
 
 - Hard (402 `limit_reached`, `which`): projects, active API keys.
-- Soft-drop: events per month. The collect API always answers 202; past the
-  budget hits are counted but not stored, `GET /account/usage` reports
+- Soft-drop: events per month. The ingest API always answers 202; past the
+  budget events are counted but not stored, `GET /account/usage` reports
   `events_dropped` and one PostHog event fires per period.
 - Retention: `python -m dbcore.cli prune-events` deletes events older than each
-  plan's `retention_days`.
+  plan's `retention_days`, drops issues left empty and recomputes the counters
+  of issues that lost events.
 
 ## Privacy
 
-Raw IPs and user agents are never stored. `dbcore.privacy` keeps a daily-salted
-sha256 of the IP (`IP_HASH_SECRET`) for rate limits, and a daily per-project
-visitor hash of (IP, UA) for unique-visitor counts; `dbcore.events` turns the UA
-into device / browser / OS and the IP into country / region / city (GeoLite2,
-optional) and drops both. Page URLs lose their query string before storage.
+Raw user agents are never stored; raw IPs only when a project opts in
+(`store_ip`). `dbcore.privacy` keeps a daily-salted sha256 of the IP
+(`IP_HASH_SECRET`) for rate limits and the anonymous user hash, and a stable
+per-project hash of the client's own `user.id` for affected-user counts.
+`dbcore.ingest` turns the UA into browser / OS / device and drops it, strips
+query strings and fragments from URLs, and replaces secret-looking values in
+`tags`, `extra`, `breadcrumbs[].data` and `user` (and bearer tokens / card
+numbers in messages) with `[Filtered]`.
