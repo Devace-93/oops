@@ -1,25 +1,35 @@
 # oops — Interface Contract
 
 This file is the shared contract between the backend (Flask), the Qwik frontend,
-the tracker script and the MCP server. All of them build against it. Keep it in
+the browser SDK and the MCP server. All of them build against it. Keep it in
 sync.
 
-oops is a privacy-friendly web-analytics service: an **account** registers
-**projects** (one per tracked site or app), each project receives **hits**
-(page views and custom events) through a per-project public key — from the
-**tracker script** (`/m.js`), the **pixel** or the **collect API** — and the
-dashboard, the REST API and the MCP server read the aggregated **stats**.
+oops is an error-tracking service: an **account** registers **projects** (one
+per app, site or service), each project receives **error events** through a
+per-project public key — from the **browser SDK** (`/o.js`) or the **ingest
+API** — the server groups them into **issues** by fingerprint, and the
+dashboard, the REST API and the MCP server read, triage and resolve them.
 
 Vocabulary:
 
-- **hit** = one row in `events`: a page view (`kind=pageview`) or a custom
-  event (`kind=event`, with a `name` and optional `props`).
-- **visitor** = a daily, per-project, cookie-less hash of (IP, user agent).
-  Over several days, "visitors" is the sum of daily uniques.
-- **dimension** = a column you can break down or filter by: `path`, `hostname`,
-  `referrer`, `country`, `region`, `city`, `device`, `browser`, `os`, `lang`,
-  `utm_source`, `utm_medium`, `utm_campaign`, `name`, `ip` (values only when
-  the project stores addresses).
+- **event** = one row in `events`: a single occurrence of an error (or a
+  captured message) with its stack frames, breadcrumbs, tags and context.
+- **issue** = the group every event lands in, keyed by `fingerprint`. It
+  carries the counters (`event_count`, `user_count`), `first_seen` /
+  `last_seen`, a `status` (`open` | `resolved` | `ignored`) and a per-project
+  `number` (`#12`) for humans.
+- **fingerprint** = sha256 of the client-provided `fingerprint` array when
+  present, otherwise of `type` + normalised `message` + the top in-app frame
+  (`filename` without query string + `function`). Normalisation replaces runs
+  of digits, hex blobs ≥ 8 chars, UUIDs and quoted strings with placeholders
+  and truncates to 200 chars, so `User 42 not found` and `User 43 not found`
+  are one issue.
+- **level** = `fatal` | `error` | `warning` | `info` (default `error`).
+- **environment** (`production` by default) and **release** (free text, e.g.
+  `1.4.2` or a git sha) are free-form labels on every event, used as filters.
+- **affected users** = `COUNT(DISTINCT user_hash)`: the client's own `user.id`
+  (hashed per project) when it sends one, otherwise the daily cookie-less
+  visitor hash of (IP, user agent).
 - **features** = oops' *own* switches (`packages/shared/feature_flags.json`,
   resolved from PostHog, exposed as `GET /api/features` and `me.features`).
 
@@ -28,14 +38,14 @@ Vocabulary:
 | Service  | Port | Notes |
 |----------|------|-------|
 | api      | 5000 | Flask JSON API, mounted at `/api` by Caddy |
-| web      | 3000 | Qwik City (Bun) SSR server: marketing, dashboard, `/m.js` |
+| web      | 3000 | Qwik City (Bun) SSR server: marketing, dashboard, `/o.js` |
 | mcp      | 3333 | Streamable HTTP MCP server, mounted at `/mcp` by Caddy |
 | postgres | 5432 | |
 | redis    | 6379 | db0 rate-limit storage |
 | caddy    | 8084 | dev entrypoint (prod: routed by the 3m4 edge Caddy, see deploy/PRODUCTION.md) |
 
-Local dev lives on `http://localhost:8084` (8080 is 3m4, 8081 exp, 8082 retro).
-Frontend tooling is **Bun**. Compose project name is `oops`.
+Local dev lives on `http://localhost:8084` (8080 is 3m4, 8081 exp, 8082 retro,
+8083 metrics). Frontend tooling is **Bun**. Compose project name is `oops`.
 
 ## Auth
 
@@ -43,33 +53,37 @@ Frontend tooling is **Bun**. Compose project name is `oops`.
   ~30 min; refresh token (opaque, stored hashed) ~30 days.
 - Management API: API keys, header `X-API-Key: oops_live_…` (maps to an
   account). The MCP server also accepts the key as `Authorization: Bearer`.
-- Collect API: project **public keys**, header `X-Project-Key: oops_pub_…`
-  or the `k` / `project_key` field of the body or query string (so the pixel
-  can be a plain `<img>`). A public key identifies exactly one project; it has
-  no role, cannot read anything and cannot call the management API. It is
-  *public by design* (it ships in the snippet); abuse is contained by rate
-  limits, size caps, the bot filter and the per-project `allowed_origins`, and
-  it can be rotated at any time.
+- Ingest API: project **public keys**, header `X-Project-Key: oops_pub_…` or
+  the `k` / `project_key` field of the body. A public key identifies exactly
+  one project; it has no role, cannot read anything and cannot call the
+  management API. It is *public by design* (it ships in the SDK snippet);
+  abuse is contained by rate limits, size caps and the per-project
+  `allowed_origins`, and it can be rotated at any time.
 
 Keys are stored as sha256 hashes plus a non-sensitive prefix
-(`oops_live_AbCd`, `oops_pub_AbCd`); the full secret is returned exactly
-once (creation / rotation). Exception: the public key is also shown in the
-project settings (it is not a secret), so `Project.public_key` is always
-present for the owner.
+(`oops_live_AbCd`, `oops_pub_AbCd`); the full secret is returned exactly once
+(creation / rotation). Exception: the public key is also shown in the project
+settings (it is not a secret), so `Project.public_key` is always present for
+the owner.
 
 ### Authorization (RBAC)
 
 - Every API key has a **role** (`viewer` | `editor` | `admin`). Roles → scopes
   live in `packages/shared/api_key_roles.json` (shared by API, dashboard, MCP).
-- Scopes: `projects:read|write|delete`, `stats:read`, `events:delete`,
-  `usage:read`, `audit:read`. Dashboard JWT sessions hold every scope.
+- Scopes: `projects:read|write|delete`, `issues:read`, `issues:write`,
+  `events:delete`, `usage:read`, `audit:read`. Dashboard JWT sessions hold
+  every scope.
+  - viewer: `projects:read`, `issues:read`, `usage:read`
+  - editor: viewer + `projects:write`, `issues:write`
+  - admin: editor + `projects:delete`, `events:delete`, `audit:read`
 - Each endpoint names its scope. Missing scope → **403**
   `{ "error": { "code": "insufficient_scope", "message", "required_scope", "role" } }`
   plus an `auth.denied` audit event.
 - Audit: every mutation and every denial is appended to `audit_events` in the
   same transaction. Actions: `project.create|update|delete|rotate_key`,
-  `events.purge`, `apikey.create|revoke`, `auth.denied`. Hits are **not**
-  audited (they are end-user traffic, metered instead).
+  `issue.update`, `issues.bulk_update`, `events.purge`, `apikey.create|revoke`,
+  `auth.denied`. Ingested events are **not** audited (they are end-user
+  traffic, metered instead).
 
 ## Limits and metering
 
@@ -78,318 +92,290 @@ Plan limits come from `packages/shared/plan_limits.json`. While the
 
 - **Hard limits** (creation blocked with **402** `limit_reached`, `error.which`
   = `projects` | `api_keys`).
-- **Soft-drop limit**: `events_per_month`. Every hit received by the collect
+- **Soft-drop limit**: `events_per_month`. Every event received by the ingest
   API counts +1 on the account's calendar-month counter (`usage.events`). Past
-  the limit the API keeps answering 202 (a tracked site never sees an error)
-  but the hit is **not stored** (`{ok:false, reason:"limit"}`); the counter
-  keeps counting so the overage is visible (`usage.events_dropped`), and one
-  PostHog `limit_reached {which: "events"}` event fires per period.
+  the limit the API keeps answering 202 (an app reporting an error never gets
+  a second error back) but the event is **not stored**
+  (`{ok:false, reason:"limit"}`); the counter keeps counting so the overage is
+  visible (`usage.events_dropped`), and one PostHog `limit_reached
+  {which: "events"}` event fires per period.
 - **Retention**: `retention_days`. `python -m dbcore.cli prune-events` (cron)
-  deletes events older than the account plan's window.
+  deletes events older than the account plan's window, then deletes issues
+  left with zero events and recomputes `event_count` / `user_count` on the
+  ones that lost events.
 
-## Privacy
+## Privacy and payload hygiene
 
 - Raw IPs are not stored by default. `ip_hash = sha256(ip + ":" + daily_salt)`
   where `daily_salt = sha256(IP_HASH_SECRET + ":" + YYYY-MM-DD)`; used for
-  rate limits only. A project with `store_ip: true` keeps the raw address in
-  `Event.ip` (≤ 45 chars, IPv6 included); it then shows in the event log and
-  as the `ip` dimension.
-- `visitor_hash = sha256(daily_salt + ":" + project_id + ":" + ip + ":" + user_agent)`.
-  No cookie, no localStorage, no cross-day or cross-site identity. The raw
-  user agent is parsed into `device` / `browser` / `os` and discarded.
-- Location (`country`, `region`, `city`) comes from the GeoLite2 database
-  (`GEOIP_DB_PATH`) while the `geo` feature is ON; the IP is only used
-  transiently for the lookup. No database = all three are null.
-- Page URLs lose their query string before storage (it is only read for the
-  three `utm_*` tags), so tokens and emails in URLs never reach the dashboard.
-- `title` ≤ 200, `path` ≤ 2048, `referrer` ≤ 2048 (scheme + host + path, no
-  query), `props` ≤ 2 KB JSON, `name` ≤ 60.
+  rate limits and the anonymous visitor hash only. A project with
+  `store_ip: true` keeps the raw address in `Event.ip` (≤ 45 chars).
+- `user_hash = sha256(project_id + ":" + user.id)` when the client sends a
+  user id, else `sha256(daily_salt + ":" + project_id + ":" + ip + ":" + ua)`.
+  The client-provided `user` object (`id` ≤ 120, `email` ≤ 255, `name` ≤ 120)
+  is stored as sent: it is the developer's own identifier for their own user.
+- The raw user agent is parsed into `browser` / `os` / `device` and discarded.
+- URLs lose query string and fragment before storage (`url` keeps
+  scheme + host + path, ≤ 2048; `path` and `hostname` are derived).
+- **Scrubbing**: inside `tags`, `extra`, `breadcrumbs[].data` and `user`, any
+  key matching `/password|passwd|secret|token|authorization|cookie|api[_-]?key|card|cvv|ssn/i`
+  has its value replaced by `"[Filtered]"`. Strings that look like bearer
+  tokens or card numbers inside `message` are replaced too.
+- Caps: `type` ≤ 200, `message` ≤ 4096 (fingerprint uses the first 200
+  normalised chars), `frames` ≤ 50 (keep the first 50 from the top),
+  `frames[].filename` ≤ 1024, `frames[].function` ≤ 255, `stack` (raw string)
+  ≤ 16 KB, `tags` ≤ 20 pairs (key ≤ 40, value ≤ 200), `extra` ≤ 8 KB JSON,
+  `breadcrumbs` ≤ 30 items / 8 KB (keep the last 30), `fingerprint` ≤ 5 × 100,
+  `environment` ≤ 40, `release` ≤ 100, `platform` ≤ 30, `sdk` ≤ 60. Request
+  bodies are capped at 64 KB (413); a batch holds ≤ 20 events.
 
 ## REST API (all under `/api`)
 
 Responses are JSON. Errors: `{ "error": { "code": "string", "message": "string" } }`.
 Rate limits: default `RATE_LIMIT_DEFAULT` per IP; management routes called with
-an API key add `RATE_LIMIT_PUBLIC_API` per key; collect routes use
-`RATE_LIMIT_COLLECT` per (project, IP) instead of the default.
+an API key add `RATE_LIMIT_PUBLIC_API` per key; ingest routes use
+`RATE_LIMIT_INGEST` per (project, IP) instead of the default.
 
-CORS: management routes allow the dashboard origin only. **Collect routes
-allow any origin** (no credentials; preflight allows `Content-Type`,
-`X-Project-Key`, `Authorization`) because they are called from tracked sites.
-Request bodies are capped at 64 KB (413).
+CORS: management routes allow the dashboard origin only. **Ingest routes allow
+any origin** (no credentials; preflight allows `Content-Type`,
+`X-Project-Key`, `Authorization`) because they are called from the apps that
+embed the SDK. `text/plain` bodies are accepted so the SDK can post without a
+preflight.
 
 ### Auth
 
-- `POST /auth/register` `{email, password, account_name?}` → `{user, account, access_token, refresh_token}` (201). Gated by feature `signups`.
-- `POST /auth/login` `{email, password}` → `{user, account, access_token, refresh_token}`
-- `POST /auth/refresh` `{refresh_token}` → `{access_token}`
-- `POST /auth/logout` `{refresh_token}` → 204
-- `GET  /auth/me` → `{user, account, plan, limits, usage, counts:{projects}, features}`
+| Method | Path | Body / notes |
+|---|---|---|
+| POST | `/auth/register` | `{ email, password, account_name? }` → 201 `{ user, account, access_token, refresh_token }`. 403 `signups_disabled` while the `signups` feature is OFF. |
+| POST | `/auth/login` | `{ email, password }` → 200 same shape. |
+| POST | `/auth/refresh` | `{ refresh_token }` → `{ access_token, refresh_token }` (rotation). |
+| POST | `/auth/logout` | `{ refresh_token }` → 204. |
+| GET | `/auth/me` | `{ user, account, plan, limits, usage, counts: { projects }, features }`. |
 
-### Projects
+### Projects (`projects:*`)
 
-- `GET    /projects?q=` → `{items:[Project], total}` — `projects:read`. Newest first; `q` searches name, key and URL.
-- `POST   /projects` `{name, key?, description?, url?, timezone?, allowed_origins?, store_ip?}` → Project (201) — `projects:write`.
-  `key` defaults to a slug of `name`; must match `^[a-z0-9][a-z0-9-]{0,62}$`
-  and be unique per account (409 `key_taken`). `timezone` is an IANA name
-  (400 `invalid_timezone`), default `UTC`. Generates the public key.
-  402 `limit_reached` (`which: "projects"`).
-- `GET    /projects/:id` → Project — `projects:read`
-- `PATCH  /projects/:id` `{name?, description?, url?, timezone?, allowed_origins?, collect_enabled?, exclude_bots?, store_ip?}` → Project — `projects:write`.
-  `allowed_origins` is a list (≤ 20) of hostnames (`example.com`,
-  `*.example.com`; full URLs are reduced to their host; 400 `invalid_origins`).
-- `DELETE /projects/:id` → 204 — `projects:delete` (cascades events)
-- `POST   /projects/:id/rotate-key` → `{public_key, public_key_prefix}` — `projects:write`. The old key stops working immediately. Audit `project.rotate_key`.
-- `GET    /projects/:id/summary` → Summary — `stats:read`.
-- `DELETE /projects/:id/events?before=YYYY-MM-DD` → `{deleted, before}` — `events:delete`. Without `before`, everything. Audit `events.purge`.
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/projects` | `{ items: Project[] }`, newest first. `projects:read` |
+| POST | `/projects` | `{ name, key?, description?, url?, allowed_origins?, timezone? }` → 201 `Project` (public key included). 402 past the plan. `projects:write` |
+| GET | `/projects/<id>` | `Project`. `projects:read` |
+| PATCH | `/projects/<id>` | `ProjectPatch` → `Project`. `projects:write` |
+| DELETE | `/projects/<id>` | 204, cascades issues and events. `projects:delete` |
+| POST | `/projects/<id>/rotate-key` | New public key, old one stops working at once → `Project`. `projects:write` |
+| GET | `/projects/<id>/summary` | `{ open_issues, events_24h, events_30d, users_30d, last_event_at }`. `projects:read` |
+| DELETE | `/projects/<id>/events` | Purge every event and issue of the project → `{ deleted_events, deleted_issues }`. `events:delete` |
 
-`:id` is the project UUID. Every project endpoint is scoped to `g.account_id`;
-a project of another account is a 404, never a 403.
+`key` is a slug (`[a-z0-9-]{1,63}`), unique per account, derived from the name
+when omitted. `timezone` is an IANA name (default `UTC`) used to bucket days.
 
-### Stats (`stats:read`)
+### Ingest (project public key; `ingest-api` feature; CORS `*`)
 
-Common query parameters (the **range**):
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/ingest`, `/ingest/event` | One event → **202** `{ ok: true, event_id, issue_id, issue_number }` or `{ ok: false, reason }`. |
+| POST | `/ingest/batch` | `{ events: [ … ≤ 20 ] }` → 202 `{ ok: true, results: [ per-event result ] }`. |
 
-| param | meaning |
-|---|---|
-| `period` | `today` \| `yesterday` \| `7d` \| `30d` (default) \| `90d` \| `12mo` — local dates in `tz` |
-| `from`, `to` | `YYYY-MM-DD`, inclusive local dates; override `period`. Max span 400 days (400 `invalid_range`) |
-| `tz` | IANA zone, default the project's `timezone` (400 `invalid_tz`) |
-| `interval` | `hour` \| `day` \| `month`; auto: hour ≤ 2 days, month > 120 days |
-| any dimension | filter, e.g. `country=ES&device=mobile`; `referrer=(direct)` selects hits without referrer; `name=` implies `kind=event` |
+Event payload (JSON, form-encoded or `text/plain` JSON):
 
-- `GET /projects/:id/stats?…&limit=8` → Stats (totals, previous period of the same length, series, every dimension's top `limit` rows (1–50), live).
-- `GET /projects/:id/stats/breakdown?by=<dimension>&page=1&per_page=50&…` → `{project_id, range, filters, by, items:[BreakdownRow], page, per_page, total}` (400 `invalid_dimension`). Sorted by visitors then page views; `name` by events.
-- `GET /projects/:id/stats/series?…` → `{project_id, range, filters, series}`
-- `GET /projects/:id/events?…&kind=pageview|event&q=&page=1&per_page=50` → `{project_id, range, filters, items:[Event], page, per_page, total}` newest first. `q` matches path, title or event name.
-- `GET /projects/:id/live` → Live (last `LIVE_WINDOW_MIN` minutes, default 5).
+```jsonc
+{
+  "k": "oops_pub_…",              // or X-Project-Key header
+  "type": "TypeError",             // exception class / error name; required unless message is set
+  "message": "x is not a function",// required unless type is set
+  "level": "error",                // fatal | error | warning | info
+  "stack": "TypeError: …\n at …",  // raw stack string, parsed server-side when frames is absent
+  "frames": [{ "filename": "https://app/x.js", "function": "init", "lineno": 12, "colno": 4, "in_app": true }],
+  "url": "https://app.example/checkout?x=1", // query and fragment dropped on storage
+  "release": "1.4.2", "environment": "production", "platform": "javascript", "sdk": "oops-js/0.1.0",
+  "user": { "id": "u_42", "email": "…", "name": "…" },
+  "tags": { "page": "checkout" }, "extra": { "cart": 3 },
+  "breadcrumbs": [{ "ts": "2026-10-16T10:00:00Z", "category": "click", "message": "button#pay", "level": "info", "data": {} }],
+  "fingerprint": ["checkout", "pay-failed"],
+  "ts": "2026-10-16T10:00:01Z"     // optional client timestamp; server time if missing or > 5 min skew
+}
+```
 
-### Collect (end users; project public key)
+Frames are ordered **top of the stack first** (the frame that threw is
+`frames[0]`). Stack strings in V8 (`at fn (file:line:col)`), Firefox / Safari
+(`fn@file:line:col`) and Python traceback (`File "x", line N, in fn`) formats
+are parsed best-effort; unparseable lines are kept in `stack_raw` only.
 
-Feature `collect-api` OFF → 503 `feature_disabled`. Unknown/rotated key → 401
-`invalid_project_key`. Rate limited per (project, IP). Every accepted request
-answers **202** with a tiny JSON body; a tracked site never sees a 4xx for a
-valid, well-formed hit.
+Drop reasons (always 202): `paused` (`ingest_enabled` false), `origin`
+(`allowed_origins` set and the page / `Origin` host is not in it), `limit`
+(over the monthly budget). Malformed payloads (neither `type` nor `message`,
+bad JSON) are **400** `invalid_event`; a bad key is **401**
+`invalid_project_key`; `ingest-api` OFF is **503**.
 
-- `POST /collect` (also `/collect/` and `/collect/event`). Body is JSON (any
-  content type — the tracker posts `text/plain` to avoid a preflight), form
-  fields or the query string. Fields (short keys are what the tracker sends,
-  long aliases are accepted):
+Ingesting an event upserts its issue in one transaction: new fingerprint →
+new issue (`status=open`, `number` = project's next); existing → bump
+`event_count`, `last_seen`, `user_count` (recomputed cheaply via
+`INSERT … ON CONFLICT` on `issue_users(issue_id, user_hash)`), merge
+`environment` / `release` into the issue's `environments` / `releases` (last
+10 releases kept). A **resolved** issue that receives a new event
+**reopens** (`status=open`, `resolved_at=null`) and sets `regressed_at`.
+An **ignored** issue stays ignored but still counts.
 
-  | field | rules |
-  |---|---|
-  | `k` / `project_key` | required if no header |
-  | `n` / `name` | event name; `pageview` (default) or 1–60 chars `[A-Za-z0-9_][A-Za-z0-9_ .:/-]*` (400 `invalid_name`) |
-  | `u` / `url` | full URL or path. Hostname → `hostname`, path → `path`, query → UTM tags only |
-  | `r` / `referrer` | referrer URL; dropped when its host equals the page host |
-  | `t` / `title` | ≤ 200 |
-  | `w`, `h` | screen size, 1–20000 |
-  | `l` / `lang` | ≤ 16 |
-  | `p` / `props` | JSON object ≤ 2 KB, custom events only (400 `invalid_props` / `props_too_large`) |
-  | `s` / `source` | `script` (default) \| `pixel` \| `api` |
+### Issues and events (`issues:*`, under `/projects/<id>`)
 
-  Response `{ "ok": true }` when stored, or `{ "ok": false, "reason": r }` with
-  `r` = `paused` (`collect_enabled` is false) · `origin` (page host — from the
-  URL or the `Origin` / `Referer` header — not in `allowed_origins`; a bare path
-  with no header passes, since it cannot be attributed to a host) · `bot` (UA looks like a crawler / headless browser and
-  `exclude_bots` is true) · `limit` (over the monthly budget). Bots and
-  origin / paused drops are not metered; limit drops are.
-  Device, browser, OS, location, `visitor_hash` and `ip_hash` come from the
-  request itself; the server time is the hit time.
-- `GET /collect/pixel.gif?k=…&u=/path&n=open&r=&t=` → a 43-byte transparent
-  GIF (`Cache-Control: no-store`), source `pixel`. `u` falls back to the
-  `Referer` header. Always answers the GIF, even for an invalid hit.
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/issues` | Paged list. Query: `status` (`open` default, `resolved`, `ignored`, `all`), `level`, `environment`, `release`, `q` (ILIKE on title / culprit / type), `period` (`24h`, `7d`, `30d` default, `90d`, `all`; by `last_seen`), `sort` (`last_seen` default, `first_seen`, `events`, `users`), `page`, `per_page` (≤ 100). → `{ items: Issue[], page, per_page, total }`. `issues:read` |
+| GET | `/issues/<issue_id>` | `Issue` with `latest_event: Event`. `<issue_id>` is the uuid or the project number (`12`). `issues:read` |
+| PATCH | `/issues/<issue_id>` | `{ status }` → `Issue`. Audit `issue.update`. `issues:write` |
+| POST | `/issues/bulk` | `{ ids: [≤ 100], status }` → `{ updated }`. Audit `issues.bulk_update`. `issues:write` |
+| GET | `/issues/<issue_id>/events` | Paged occurrences, newest first: `{ items: Event[], page, per_page, total }`. `issues:read` |
+| GET | `/events` | Paged events across the project; filters `level`, `environment`, `release`, `q` (message), `issue`, `period`. `issues:read` |
+| GET | `/events/<event_id>` | One `Event`. `issues:read` |
+| GET | `/stats` | `{ range, totals, previous, series, breakdowns }` (below). `issues:read` |
+| GET | `/live` | `{ events: n, window_min }`: events in the last `LIVE_WINDOW_MIN` minutes. `issues:read` |
 
-### Account / keys
+`GET /stats` query: `period` (`today`, `yesterday`, `24h`, `7d` default,
+`30d`, `90d`, `12mo`) or `from` / `to` (dates in the project time zone),
+`interval` (`hour` | `day` | `month`, auto by range), filters `level`,
+`environment`, `release`.
 
-- `GET /account/usage` → Usage — JWT or key, `usage:read`
-- `GET /account/audit?limit=50&action=` → `{items:[AuditEvent], limit}` newest first — JWT or key, `audit:read`
-- `GET /apikeys` → `[{id, name, prefix, role, last_used_at, created_at}]` (JWT)
-- `GET /apikeys/roles` → `{default_role, roles:{viewer|editor|admin: {label, description, scopes}}}` (public)
-- `POST /apikeys` `{name, role?}` → `{id, key, prefix, name, role}` (201; full key shown once; 400 `invalid_role`; 402 `which: "api_keys"`) (JWT)
-- `GET /apikeys/me` → `{account, key:{id, prefix, role}, scopes:[...]}` (API key only; what the MCP server calls at startup)
-- `DELETE /apikeys/:id` → 204 (JWT)
+```jsonc
+{
+  "range": { "from": "…", "to": "…", "tz": "Europe/Madrid", "interval": "day" },
+  "totals":   { "events": 120, "users": 38, "issues_new": 4, "issues_open": 9 },
+  "previous": { "events": 90,  "users": 30, "issues_new": 2 },
+  "series": [{ "ts": "2026-10-10T00:00:00+02:00", "events": 10, "users": 4 }],
+  "breakdowns": {
+    "level": [{ "value": "error", "events": 100, "users": 30 }],
+    "environment": [...], "release": [...], "browser": [...], "os": [...], "device": [...], "type": [...]
+  }
+}
+```
 
-### Features (oops' own switches)
+Each breakdown holds the top 10 values by events.
 
-- `GET /features` → `{features:{<key>: bool}}`. Public; an optional bearer token upgrades resolution to the account's targeting bucket.
+### Account, keys, features, billing
 
-### MCP (AI agents)
-
-- Streamable HTTP endpoint `POST /mcp` (Caddy → `mcp:3333`), auth `Authorization: Bearer oops_live_…` (or `X-API-Key`). Stateless; one server per request bound to the caller's key.
-- stdio flavour published to npm as `oops-errors-mcp`. Tools/roles table in `packages/mcp-server/README.md`.
-- Tools (scope in parentheses): `list_projects` `get_project` (projects:read) ·
-  `create_project` `update_project` `rotate_project_key` (projects:write) ·
-  `delete_project` (projects:delete, needs confirmation) ·
-  `project_summary` `get_stats` `get_breakdown` `list_events` `get_live` (stats:read) ·
-  `purge_events` (events:delete, needs confirmation) ·
-  `get_usage` (usage:read) · `get_audit_log` (audit:read).
-- Resources `oops://projects` and `oops://projects/{id}/summary`; prompt
-  `weekly_report` (project) walks a model through the last 7 days vs the week before.
-- Destructive tools ask the user through MCP elicitation when the client
-  supports it, otherwise refuse until called with `confirm: true`.
-
-### Billing (only when BILLING_ENABLED=true)
-
-- `GET  /billing/offerings` → offerings/packages for the paywall
-- `POST /billing/webhook` ← RevenueCat (server-to-server; verifies `Authorization` header)
-
-### Health
-
-- `GET /healthz` → `{status:"ok"}` (also `/api/healthz` behind Caddy)
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/account/usage` | `{ period_start, period_end, events, events_dropped, counts: { projects, api_keys }, limits }`. `usage:read` |
+| GET | `/account/audit` | `{ items: AuditEvent[], page, per_page, total }`; filters `action`, `actor_type`, `outcome`, `since`. `audit:read` |
+| GET | `/apikeys` | `{ items: ApiKey[] }` (prefix + role, never the secret). JWT only. |
+| GET | `/apikeys/roles` | Roles → scopes from `api_key_roles.json`. |
+| POST | `/apikeys` | `{ name, role? }` → 201 `{ key: ApiKey, secret }`. 402 past the plan. JWT only. |
+| DELETE | `/apikeys/<id>` | Revoke → 204. JWT only. |
+| GET | `/apikeys/me` | The calling key: `{ id, name, role, scopes, account }`. |
+| GET | `/features` | `{ features: { key: bool } }` for the caller (anonymous allowed). |
+| GET | `/billing/offerings`, POST `/billing/webhook` | Unchanged from the sibling apps (RevenueCat). Hidden while `early-access` is ON. |
+| GET | `/healthz` | `{ "status": "ok" }` |
 
 ## Objects
 
-### Project
-```json
-{
-  "id": "uuid",
-  "key": "kinegram",
-  "name": "Kinegram Generator",
-  "description": "optional",
-  "url": "https://kinegram.3m4.net",
-  "public_key": "oops_pub_…   (always, owner-only object)",
-  "public_key_prefix": "oops_pub_AbCd",
-  "timezone": "Europe/Madrid",
-  "allowed_origins": ["kinegram.3m4.net"],
-  "collect_enabled": true,
-  "exclude_bots": true,
-  "store_ip": false,
-  "counts": { "pageviews_30d": 1284, "visitors_30d": 611, "pageviews_today": 42, "last_event_at": "2026-10-15T10:00:00Z" },
-  "created_at": "2026-10-15T10:00:00Z",
-  "updated_at": "2026-10-15T10:00:00Z"
+```ts
+Project {
+  id, key, name, description?, url?,
+  public_key, public_key_prefix,          // oops_pub_…
+  timezone,                               // IANA, default "UTC"
+  allowed_origins: string[],              // hostnames, empty = any
+  ingest_enabled: boolean,                // pause without touching the snippet
+  store_ip: boolean,                      // keep raw IPs on events (default false)
+  counts: { open_issues, events_24h, events_30d, users_30d, last_event_at? },
+  created_at, updated_at
 }
-```
-
-### Event
-```json
-{
-  "id": 123,
-  "ts": "2026-10-15T10:00:00Z",
-  "kind": "pageview",
-  "name": null,
-  "hostname": "kinegram.3m4.net",
-  "path": "/editor",
-  "title": "Editor",
-  "referrer": "https://news.ycombinator.com/item",
-  "referrer_host": "news.ycombinator.com",
-  "utm_source": null, "utm_medium": null, "utm_campaign": null,
-  "country": "ES", "region": "Madrid", "city": "Madrid",
-  "device": "desktop", "browser": "Firefox", "os": "Linux",
-  "screen_w": 1440, "screen_h": 900,
-  "lang": "es-ES",
-  "visitor": "a1b2c3d4",
-  "ip": null,
-  "source": "script",
-  "props": {}
+Issue {
+  id, project_id, number,                 // #number is per project, starts at 1
+  fingerprint, title,                     // "TypeError: x is not a function"
+  culprit?,                               // "init in https://app/x.js"
+  type?, level, status,                   // open | resolved | ignored
+  first_seen, last_seen, resolved_at?, regressed_at?,
+  event_count, user_count,
+  environments: string[], releases: string[],   // releases: last 10 seen
+  latest_event_id?, latest_event?: Event,       // latest_event only on GET /issues/<id>
+  created_at, updated_at
 }
-```
-`kind` ∈ `pageview` | `event`. `device` ∈ `desktop` | `mobile` | `tablet` |
-`bot` | `null`. `source` ∈ `script` | `pixel` | `api`. `visitor` is the first 8
-chars of the daily visitor hash; `ip` is the raw address when the project has
-`store_ip` on, otherwise null.
-
-### Totals / SeriesPoint / BreakdownRow
-```json
-{ "pageviews": 1284, "visitors": 611, "events": 37 }
-{ "bucket": "2026-10-15", "pageviews": 42, "visitors": 30, "events": 2 }
-{ "value": "/docs", "pageviews": 612, "visitors": 480, "events": 0 }
-```
-`bucket` is a local key: `YYYY-MM-DDTHH:00` (hour), `YYYY-MM-DD` (day),
-`YYYY-MM` (month). Missing buckets are present with zeros. For `referrer`,
-hits without a referrer appear as `"(direct)"`; other dimensions skip nulls.
-
-### Stats
-```json
-{
-  "project_id": "uuid",
-  "range": { "from": "2026-09-16", "to": "2026-10-15", "tz": "Europe/Madrid", "interval": "day", "days": 30 },
-  "filters": { "country": "ES" },
-  "totals": Totals,
-  "previous": Totals,
-  "series": [SeriesPoint],
-  "breakdowns": { "path": [BreakdownRow], "referrer": [...], "country": [...], "region": [...], "city": [...], "device": [...], "browser": [...], "os": [...], "lang": [...], "utm_source": [...], "utm_medium": [...], "utm_campaign": [...], "name": [...] },
-  "live": Live
+Event {
+  id: string,                             // bigint as string
+  project_id, issue_id, issue_number, ts, level,
+  type?, message, frames: Frame[], stack_raw?,
+  url?, path?, hostname?, release?, environment, platform?, sdk?,
+  user?: { id?, email?, name? }, user_hash,
+  browser?, os?, device?,                 // from the (discarded) user agent
+  ip?,                                    // only with store_ip
+  tags: Record<string,string>, extra: object, breadcrumbs: Breadcrumb[],
+  source                                  // sdk | api
 }
+Frame { filename?, function?, lineno?, colno?, in_app: boolean }
+Breadcrumb { ts?, category, message?, level?, data? }
+ApiKey { id, name, role, prefix, created_at, last_used_at?, revoked_at? }
+AuditEvent { id, ts, actor_type, actor_id?, actor_label?, action, target_type?, target_id?, outcome, meta }
 ```
 
-### Live
-```json
-{ "window_minutes": 5, "visitors": 7, "pageviews": 11, "pages": [ { "path": "/", "visitors": 4, "pageviews": 5 } ] }
-```
-
-### Summary
-```json
-{
-  "project_id": "uuid",
-  "timezone": "Europe/Madrid",
-  "today": Totals, "yesterday": Totals, "last_7_days": Totals, "last_30_days": Totals,
-  "live_visitors": 7,
-  "last_event_at": "2026-10-15T10:00:00Z",
-  "all_time_pageviews": 98213
-}
-```
-
-### Usage
-```json
-{
-  "period_start": "2026-10-01",
-  "period_end": "2026-11-01",
-  "events": 12345,
-  "events_dropped": 0,
-  "counts": { "projects": 2, "api_keys": 1 },
-  "limits": { "...plan_limits.json entry..." }
-}
-```
-
-### AuditEvent
-```json
-{ "id", "ts", "actor_type": "user|api_key|system", "actor_id", "actor_label", "action", "target_type", "target_id", "outcome": "ok|denied|error", "meta": {} }
-```
-
-## Tracker contract (`/m.js`)
-
-Built from `packages/tracker` (TypeScript, zero dependencies, ES2019, ≤ 3 KB
-gzipped) into `apps/web/public/m.js` (IIFE) so the web service serves it at
-`https://metrics.3m4.net/m.js`. Versioned copy at `/m/v1.js` (same file).
-Caddy adds `Cache-Control: public, max-age=3600` and `Access-Control-Allow-Origin: *`.
+## Browser SDK (`/o.js`, also `/o/v1.js`)
 
 ```html
-<script defer src="https://metrics.3m4.net/m.js" data-key="oops_pub_…"></script>
+<script defer src="https://oops.3m4.net/o.js" data-key="oops_pub_…" data-env="production" data-release="1.4.2"></script>
 ```
 
-- Attributes: `data-key` (required), `data-api` (collect endpoint, default
-  script origin + `/api/collect`), `data-spa` (`true` default: hooks
-  `pushState` / `replaceState` / `popstate`), `data-hash` (`true` keeps the
-  `#fragment` and listens to `hashchange`), `data-dnt` (`true` honours Do Not
-  Track), `data-local` (`true` also tracks on localhost / raw IPs / `file:` /
-  `*.local`, which are skipped by default).
-- Sends `{k, n, u, r, t, w, h, l, s:"script", p?}` as `text/plain` JSON via
-  `navigator.sendBeacon`, falling back to `fetch(..., {keepalive:true})`. The
-  referrer is only sent with the first hit of a page load (SPA navigations
-  send an empty one). One page view per distinct path; the first is sent on
-  load, or when a prerendered page becomes visible.
-- Global `window.oops`: `track(name, props?)`, `pageview()`. Calls queued
-  before load as `window.oops = { q: [["track", "x", {...}]] }` are replayed.
-- Declarative: clicks on `[data-oops-event="name"]` (bubbling, capture
-  phase) send that event with the JSON in `data-oops-props`.
-- No cookies, no storage, no fingerprinting. Never throws into the host page.
+- Zero dependencies, **≤ 4 KB gzipped** (build fails over budget). Never
+  throws into the host page.
+- Captures `window.onerror` (`ErrorEvent`) and `unhandledrejection`, and
+  `console.error` calls when `data-console="true"`.
+- Keeps a ring buffer of the last 30 **breadcrumbs**: clicks (tag, id, class,
+  text ≤ 60), navigation (SPA route changes via History API and `popstate`),
+  failed `fetch` / `XMLHttpRequest` (status ≥ 400 or network error, method +
+  URL without query), and `console.warn` / `console.error` when enabled.
+- Posts `text/plain` JSON to `/api/ingest` (derived from the script `src`, or
+  `data-api`) with `navigator.sendBeacon`, falling back to `fetch` with
+  `keepalive`. `source: "sdk"`, `platform: "javascript"`, `sdk: "oops-js/<version>"`.
+- Client-side hygiene: identical events (type + message + top frame) within
+  2 s are dropped; at most 30 events per minute per page; skips
+  localhost / IP / `file:` pages unless `data-local="true"`; honours
+  `data-sample="0.5"` (fraction of error events sent; captured messages and
+  explicit `capture` calls always go through).
+- Public API (`window.oops`, calls queued in `window.oops.q` before load are
+  replayed):
+  - `oops.capture(error, { level?, tags?, extra?, fingerprint? })`
+  - `oops.message(text, level = "info", { tags?, extra? })`
+  - `oops.setUser({ id?, email?, name? } | null)`
+  - `oops.setTag(key, value)` / `oops.setTags({...})`
+  - `oops.setContext(key, object)` → merged into `extra`
+  - `oops.breadcrumb({ category, message?, level?, data? })`
+  - `oops.flush()` (no-op placeholder for API symmetry)
+- Attributes: `data-key` (required), `data-api`, `data-env`, `data-release`,
+  `data-console`, `data-local`, `data-sample`, `data-user` (JSON, initial
+  user).
 
-## Frontend contract
+## Server-side reporting
 
-- Same chrome as the other 3m4 apps: footer (author → Source → info.3m4.net,
-  then pricing/blog/sponsors), language picker (34 locales, `3m4.lang`),
-  theme toggle (`3m4.theme`). Tokens in localStorage `oops_access_token` /
-  `oops_refresh_token`.
-- Routes: `/` landing · `/info` + `/info/pricing` + `/info/docs` (tracker,
-  pixel, collect API, REST reference, MCP) · `/blog` · `/sponsors` · `/login` ·
-  `/signup` · `/dashboard` (projects with 30-day counts, usage) ·
-  `/dashboard/projects/[id]` (overview: one filter row with period presets +
-  custom range, live counter, KPI tiles with deltas, one-metric column chart,
-  breakdown cards with click-to-filter and a paginated "view all" modal) ·
-  `/dashboard/projects/[id]/events` (raw event log with expandable rows) ·
-  `/dashboard/projects/[id]/settings` (public key + rotate, install snippets
-  with the real key: script / pixel / custom events / API, tracking switches,
-  time zone, allowed hostnames, project info, purge, delete) ·
-  `/dashboard/settings` (API keys, audit) · `/dashboard/billing` (hidden in early access).
-- Brand colour: Tailwind **fuchsia** scale as `primary` (3m4 blue, exp violet,
-  retro emerald, bubbles orange).
+Backends call the ingest API directly with the public key (see README for
+curl, Python and Node snippets). `platform` should name the runtime
+(`python`, `node`, `go`, …) and `source` is forced to `api` server-side for
+anything that is not the SDK (`sdk` is only trusted as a label).
+
+## MCP server (`packages/mcp-server`, npm `oops-errors-mcp`)
+
+stdio (`dist/stdio.js`) and Streamable HTTP (`dist/http.js`, `/mcp`). Auth =
+an API key; tools the key's role cannot use are hidden and re-checked on call.
+
+| Tool | Scope | Notes |
+|---|---|---|
+| `list_projects`, `get_project` | `projects:read` | |
+| `create_project`, `update_project`, `rotate_public_key` | `projects:write` | |
+| `delete_project` | `projects:delete` | elicitation or `confirm: true` |
+| `list_issues`, `get_issue`, `list_issue_events`, `get_event`, `search_events` | `issues:read` | `get_issue` accepts the uuid or `#number` |
+| `update_issue` (status), `bulk_update_issues` | `issues:write` | `resolve`, `ignore`, `reopen` convenience via `status` |
+| `get_stats`, `get_live` | `issues:read` | same shape as the REST endpoints |
+| `purge_events` | `events:delete` | elicitation or `confirm: true` |
+| `get_usage` | `usage:read` | |
+| `get_audit_log` | `audit:read` | |
+| `report_error` | `projects:read` | Posts an event to `/ingest` with the project's public key, so an agent can report its own failures into a project it can see. |
+
+Prompt `triage` (`project`, `period?`): summarise the open issues of a
+project (new vs regressed, most users affected, by environment) and propose
+what to fix, resolve or ignore first.
+
+## Features (`packages/shared/feature_flags.json`)
+
+`site-building` (inverse polarity curtain), `signups`, `early-access`,
+`public-api`, `ingest-api` (kill switch: OFF → 503 on every ingest route),
+`billing`. PostHog keys are prefixed `oops-`.
+
+## PostHog product events (server-side)
+
+`signup`, `project_created`, `issue_resolved`, `limit_reached {which}`,
+`api_key_created`. Account id is the distinct id; groups `{ account }`.

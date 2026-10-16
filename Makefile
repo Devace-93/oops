@@ -9,7 +9,7 @@ COMPOSE      := docker compose --env-file .env -f deploy/docker-compose.yml
 COMPOSE_SH   := docker compose --env-file .env -f deploy/docker-compose.yml -f deploy/docker-compose.selfhost.yml
 BASE_URL     ?= http://localhost:8084
 
-.PHONY: help up up-selfhost down build rebuild logs ps migrate prune shell-api shell-db clean e2e tracker smoke geoip
+.PHONY: help up up-selfhost down build rebuild logs ps migrate prune shell-api shell-db clean e2e sdk smoke
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -50,13 +50,10 @@ shell-db: ## psql into Postgres
 clean: ## Stop and remove volumes (DESTRUCTIVE: wipes the database)
 	$(COMPOSE) down -v
 
-tracker: ## Build the tracker script into apps/web/public (m.js + m/v1.js)
-	cd packages/tracker && bun install && bun run build
+sdk: ## Build the browser SDK into apps/web/public (o.js + o/v1.js)
+	cd packages/sdk && bun install && bun run build
 
-geoip: ## Fetch the shortener's GeoLite2 database from the server into deploy/geoip (dev only; ~50 MB)
-	mkdir -p deploy/geoip && scp root@46.225.62.18:/opt/3m4/deploy/geoip/GeoLite2-City.mmdb deploy/geoip/ && ls -la deploy/geoip
-
-smoke: ## Curl the running stack: health, tracker headers, collect round-trip (BASE_URL)
+smoke: ## Curl the running stack: health, sdk headers, collect round-trip (BASE_URL)
 	BASE_URL=$(BASE_URL) sh deploy/smoke.sh
 
 e2e: ## Run the Playwright end-to-end suite against the running stack (E2E_BASE_URL)

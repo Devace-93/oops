@@ -2,41 +2,36 @@
   "_comment": "Registry of oops' OWN feature switches (called 'features' in the API and the frontend). Consumed by the Python backend (dbcore/feature_flags.py) and the Qwik frontend (apps/web/src/lib/features.ts). Source of truth in production is PostHog; the PostHog flag key is POSTHOG_FLAG_PREFIX + key (default prefix 'oops-', because one PostHog project is shared with the other 3m4 apps). `default` is the fail-safe used when PostHog is unreachable or the flag is undefined there; self-host (no POSTHOG_API_KEY) enables everything unless a flag sets `self_host` explicitly (used by inverse-polarity flags like site-building, where ON hides the product).",
   "flags": {
     "site-building": {
-      "description": "Site-wide building/under-construction curtain. ON = the whole web UI shows the building page. The API, the collect endpoints, the tracker script and the MCP server are unaffected. Inverse polarity: OFF is normal operation.",
+      "description": "Site-wide building/under-construction curtain. ON = the whole web UI shows the building page. The API, the ingest endpoints, the SDK script and the MCP server are unaffected. Inverse polarity: OFF is normal operation.",
       "default": false,
       "self_host": false,
-      "created": "2026-10-15"
+      "created": "2026-10-16"
     },
     "signups": {
       "description": "New account registration. Login is NEVER gated.",
       "default": true,
-      "created": "2026-10-15"
+      "created": "2026-10-16"
     },
     "early-access": {
       "description": "Early access mode. ON = every account gets the enterprise limits for free, plan/billing surfaces are hidden and an early-access notice is shown. OFF = plans and limits are enforced as configured.",
       "default": true,
       "self_host": true,
-      "created": "2026-10-15"
+      "created": "2026-10-16"
     },
     "public-api": {
-      "description": "Management API access via X-API-Key (and therefore the MCP server). Dashboard sessions and the collect endpoints are not affected.",
+      "description": "Management API access via X-API-Key (and therefore the MCP server). Dashboard sessions and the ingest endpoints are not affected.",
       "default": true,
-      "created": "2026-10-15"
+      "created": "2026-10-16"
     },
-    "collect-api": {
-      "description": "The public collect endpoints (/api/collect, the pixel). OFF answers 503 to every tracker and pixel: an emergency kill switch, never a feature gate.",
+    "ingest-api": {
+      "description": "The public ingest endpoints (/api/ingest, /api/ingest/batch). OFF answers 503 to every SDK and server-side reporter: an emergency kill switch, never a feature gate.",
       "default": true,
-      "created": "2026-10-15"
-    },
-    "geo": {
-      "description": "Resolve country / region / city from the (never stored) client IP with the GeoLite2 database. OFF = hits are stored without any location.",
-      "default": true,
-      "created": "2026-10-15"
+      "created": "2026-10-16"
     },
     "billing": {
       "description": "Paywall, checkout and /billing/offerings. The RevenueCat webhook is NEVER gated.",
       "default": true,
-      "created": "2026-10-15"
+      "created": "2026-10-16"
     }
   }
 }
