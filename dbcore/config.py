@@ -43,7 +43,10 @@ class Config:
     # Registry keys (packages/shared/feature_flags.json) stay unprefixed.
     posthog_flag_prefix: str = os.getenv("POSTHOG_FLAG_PREFIX", "oops-")
 
-    # rate limiting
+    # rate limiting. RATE_LIMITS_ENABLED=false switches the limiter off
+    # entirely (CI runs the e2e suite from one address and would trip the
+    # per-IP default); never set it in production.
+    rate_limits_enabled: bool = os.getenv("RATE_LIMITS_ENABLED", "true").strip().lower() not in ("false", "0", "no", "off")
     rate_limit_default: str = os.getenv("RATE_LIMIT_DEFAULT", "120/minute")
     rate_limit_public_api: str = os.getenv("RATE_LIMIT_PUBLIC_API", "60/minute")
     # Ingest: per (project public key, client IP). A broken deploy can make one

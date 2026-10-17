@@ -31,6 +31,8 @@ jobs:
           set_var VITE_POSTHOG_KEY ""
           set_var JWT_SECRET_KEY e2e-ci-jwt-secret-not-for-production
           set_var IP_HASH_SECRET e2e-ci-ip-hash-secret-not-for-production
+          # The whole suite comes from one runner address; the per-IP limits are for humans and bots, not for it.
+          set_var RATE_LIMITS_ENABLED false
           grep -v -i 'secret\|token' .env
 
       - name: Start the stack
