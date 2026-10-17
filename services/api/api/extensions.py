@@ -53,4 +53,5 @@ limiter = Limiter(
     default_limits=[config.rate_limit_default],
     storage_uri=config.redis_url,
     strategy="fixed-window",
+    enabled=config.rate_limits_enabled,
 )
