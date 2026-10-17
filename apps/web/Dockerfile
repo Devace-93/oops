@@ -35,6 +35,8 @@ RUN bun install --frozen-lockfile || bun install
 # billing page shows a "not configured" notice instead of launching checkout.
 # VITE_METRICS_*: oops itself is tracked by metrics.3m4.net (web analytics);
 # unrelated to the oops brand, keep them.
+# VITE_OOPS_*: oops dogfoods its own SDK (/o.js, same host) and reports its
+# front-end errors to its own project; the SDK is rendered only when the key is set.
 ARG VITE_API_URL=/api
 ARG VITE_APP_URL
 ARG VITE_POSTHOG_KEY
@@ -44,6 +46,9 @@ ARG VITE_BILLING_ENABLED=true
 ARG VITE_INFO_URL=https://info.3m4.net
 ARG VITE_METRICS_PROJECT_KEY
 ARG VITE_METRICS_TRACKER_URL=https://metrics.3m4.net/m.js
+ARG VITE_OOPS_PROJECT_KEY
+ARG VITE_OOPS_SDK_URL=/o.js
+ARG VITE_OOPS_ENV=production
 ENV VITE_API_URL=$VITE_API_URL \
     VITE_APP_URL=$VITE_APP_URL \
     VITE_POSTHOG_KEY=$VITE_POSTHOG_KEY \
@@ -52,7 +57,10 @@ ENV VITE_API_URL=$VITE_API_URL \
     VITE_BILLING_ENABLED=$VITE_BILLING_ENABLED \
     VITE_INFO_URL=$VITE_INFO_URL \
     VITE_METRICS_PROJECT_KEY=$VITE_METRICS_PROJECT_KEY \
-    VITE_METRICS_TRACKER_URL=$VITE_METRICS_TRACKER_URL
+    VITE_METRICS_TRACKER_URL=$VITE_METRICS_TRACKER_URL \
+    VITE_OOPS_PROJECT_KEY=$VITE_OOPS_PROJECT_KEY \
+    VITE_OOPS_SDK_URL=$VITE_OOPS_SDK_URL \
+    VITE_OOPS_ENV=$VITE_OOPS_ENV
 RUN bun run build
 
 # ─── Runtime stage ────────────────────────────────────────────────────────────

@@ -13,6 +13,12 @@ interface ImportMetaEnv {
   /** metrics.3m4.net project public key for tracking oops itself; the tracker is rendered only when set. */
   readonly VITE_METRICS_PROJECT_KEY?: string;
   readonly VITE_METRICS_TRACKER_URL?: string;
+  /** oops project public key for reporting oops' own front-end errors to itself; the SDK is rendered only when set. */
+  readonly VITE_OOPS_PROJECT_KEY?: string;
+  /** SDK script URL; defaults to this app's own /o.js. */
+  readonly VITE_OOPS_SDK_URL?: string;
+  /** Environment tag sent with every event; defaults to "production". */
+  readonly VITE_OOPS_ENV?: string;
 }
 
 interface ImportMeta {

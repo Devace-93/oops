@@ -44,6 +44,8 @@ if [ ! -f .env ]; then
   from3m4 VITE_POSTHOG_HOST VITE_POSTHOG_HOST
   # oops is tracked by metrics (metrics.3m4.net): paste the oops project's public key once it exists.
   set_var VITE_METRICS_PROJECT_KEY ""
+  # oops dogfoods its own SDK: paste the oops project's public key (from the dashboard) once it exists.
+  set_var VITE_OOPS_PROJECT_KEY ""
   chmod 600 .env
   echo "✓ .env written"
 fi

@@ -11,3 +11,4 @@
 - Ingest never returns an error to a reporting app for business reasons: paused / origin / limit are all 202 with `ok:false`.
 - The SDK is served at `/o.js` from `apps/web/public` (built by `make sdk`), budget 4 KB gzipped.
 - oops itself is tracked by metrics (`VITE_METRICS_*`); those tokens are not part of the oops brand and must stay.
+- oops dogfoods its own SDK (`VITE_OOPS_*`): `root.tsx` renders `/o.js` with `VITE_OOPS_PROJECT_KEY` (the dashboard's own project) only when the key is set at build time.
