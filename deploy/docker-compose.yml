@@ -64,6 +64,10 @@ services:
         # oops itself is tracked by metrics (the 3m4 web-analytics app); not part of the oops brand.
         VITE_METRICS_PROJECT_KEY: ${VITE_METRICS_PROJECT_KEY:-}
         VITE_METRICS_TRACKER_URL: ${VITE_METRICS_TRACKER_URL:-https://metrics.3m4.net/m.js}
+        # oops dogfoods its own SDK: front-end errors go to oops' own project. Rendered only when the key is set.
+        VITE_OOPS_PROJECT_KEY: ${VITE_OOPS_PROJECT_KEY:-}
+        VITE_OOPS_SDK_URL: ${VITE_OOPS_SDK_URL:-/o.js}
+        VITE_OOPS_ENV: ${VITE_OOPS_ENV:-production}
     env_file: ../.env
     environment:
       # SSR resolves oops' feature switches straight from the API over the internal network.

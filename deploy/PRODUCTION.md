@@ -23,7 +23,9 @@ project (`/opt/oops`, compose project `oops`) without its own Caddy, and the
    `IP_HASH_SECRET`, PostHog keys (`POSTHOG_API_KEY`, `POSTHOG_PERSONAL_API_KEY`,
    `VITE_POSTHOG_KEY`; flags are prefixed `oops-` in the shared PostHog
    project), `VITE_METRICS_PROJECT_KEY` (oops' own project in metrics, so the
-   marketing pages and dashboard are tracked), RevenueCat keys when billing is
+   marketing pages and dashboard are tracked), `VITE_OOPS_PROJECT_KEY` (oops'
+   own project in oops, so the dashboard's front-end errors are reported to
+   itself via `/o.js`; unset = no SDK), RevenueCat keys when billing is
    switched on, a fresh Postgres password: set `POSTGRES_PASSWORD` (read by the
    postgres service through `--env-file ../.env`) and use the same value in
    `DATABASE_URL`. `deploy/first-deploy.sh` does all of this (steps 1-3, 6

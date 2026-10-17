@@ -30,6 +30,15 @@ export default component$(() => {
             defer
           />
         )}
+        {/* oops reports its own front-end errors to itself (the dashboard's project). The project key is public by design. */}
+        {import.meta.env.VITE_OOPS_PROJECT_KEY && (
+          <script
+            defer
+            src={import.meta.env.VITE_OOPS_SDK_URL || "/o.js"}
+            data-key={import.meta.env.VITE_OOPS_PROJECT_KEY}
+            data-env={import.meta.env.VITE_OOPS_ENV || "production"}
+          />
+        )}
       </head>
       <body class="min-h-screen bg-white">
         <RouterOutlet />
