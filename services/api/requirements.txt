@@ -5,7 +5,7 @@ flask-cors==6.0.5
 flask-limiter==4.1.1
 sqlalchemy==2.0.51
 psycopg[binary]==3.3.4
-pyjwt==2.13.0
+pyjwt==2.15.1
 argon2-cffi==25.1.0
 redis==8.0.0
 posthog==7.20.2
@@ -14,3 +14,5 @@ python-dotenv==1.2.2
 alembic==1.20.0
 # Event enrichment: user-agent parsing (browser / os / device; the raw UA is never stored).
 user-agents==2.2.0
+# CA bundle: 2026.10.19 drops the emSign roots whose intermediate keys were compromised (Oct 2026).
+certifi==2026.10.19
