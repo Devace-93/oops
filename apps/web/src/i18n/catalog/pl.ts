@@ -373,6 +373,8 @@ const pl: PartialCatalog = {
 
   // Billing
   "billing.title": "Płatności",
+  "billing.currentPlanIs": "Korzystasz z planu {plan}.",
+  "billing.comingSoon": "Płatne plany pojawią się, gdy oops dołączy do systemu kont 3m4.",
   "billing.selfHostTitle": "To jest instancja self-hosted.",
   "billing.selfHostDisabled": "Płatności są wyłączone",
   "billing.selfHostLimits":
@@ -384,15 +386,6 @@ const pl: PartialCatalog = {
   "billing.unavailableTitle": "Płatne plany nie są jeszcze dostępne.",
   "billing.unavailableBody":
     "Płatności wdrażamy stopniowo. Zachowujesz wszystko ze swojego obecnego planu — zajrzyj wkrótce.",
-  "billing.upgradeTitle": "Ulepsz swój plan",
-  "billing.onPlanPrefix": "Korzystasz z planu",
-  "billing.onPlanSuffix":
-    "— odblokuj więcej projektów, więcej zdarzeń miesięcznie i dłuższą retencję.",
-  "billing.monthly": "Miesięcznie",
-  "billing.annual": "Rocznie",
-  "billing.annualSave": "(oszczędzasz ok. 20%)",
-  "billing.perYear": "rok",
-  "billing.perMonth": "mies.",
   "billing.featProjects": "{n} projektów",
   "billing.featEvents": "{n} zdarzeń / mies.",
   "billing.featDataRetention": "Retencja danych: {n}",
@@ -400,21 +393,6 @@ const pl: PartialCatalog = {
   "billing.featRetention": "Retencja audytu: {n}",
   "billing.featUsers": "{n} użytkowników",
   "billing.currentPlan": "Obecny plan",
-  "billing.processing": "Przetwarzanie…",
-  "billing.upgradeTo": "Przejdź na {plan}",
-  "billing.processedBy": "Płatności obsługuje RevenueCat (Stripe).",
-  "billing.entitlementsPrefix": "Uprawnienia",
-  "billing.entitlementsSuffix": "są automatycznie mapowane na Twój plan.",
-  "billing.notConfigured":
-    "Płatności nie są jeszcze skonfigurowane (brak VITE_REVENUECAT_PUBLIC_KEY). Dodaj publiczny klucz RevenueCat Web Billing do .env i przebuduj obraz web.",
-  "billing.signInAgain": "Zaloguj się ponownie, aby ulepszyć plan.",
-  "billing.openingCheckout": "Otwieranie bezpiecznej płatności…",
-  "billing.activating": "Płatność zakończona — aktywujemy Twój plan…",
-  "billing.nowOnPlan": "Masz teraz plan {plan}! 🎉",
-  "billing.willUpdate": "Płatność otrzymana — Twój plan zaraz się zaktualizuje.",
-  "billing.cancelled": "Płatność anulowana.",
-  "billing.checkoutFailed": "Płatność nie powiodła się: {msg}",
-  "billing.unknownError": "nieznany błąd",
   "pnav.issues": "Problemy",
   "pnav.liveEvents": "W ciągu ostatnich 5 minut odebrano zdarzenie błędu",
   "pnav.openIssues": "{n} otwartych",

@@ -32,7 +32,7 @@ def within_limit(used: int, limit: int) -> bool:
 
 
 def resolve_plan_from_entitlements(entitlements: list[str]) -> str:
-    """Map active RevenueCat entitlements to our effective plan.
+    """Map active billing entitlements to our effective plan.
 
     `team` outranks `pro`. No entitlement => free.
     """

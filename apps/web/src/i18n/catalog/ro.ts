@@ -374,6 +374,8 @@ const ro: PartialCatalog = {
 
   // Billing
   "billing.title": "Facturare",
+  "billing.currentPlanIs": "Ești pe planul {plan}.",
+  "billing.comingSoon": "Planurile plătite vor apărea când oops se alătură sistemului de conturi 3m4.",
   "billing.selfHostTitle": "Aceasta este o instanță self-hosted.",
   "billing.selfHostDisabled": "Facturarea este dezactivată",
   "billing.selfHostLimits":
@@ -385,15 +387,6 @@ const ro: PartialCatalog = {
   "billing.unavailableTitle": "Planurile plătite nu sunt disponibile încă.",
   "billing.unavailableBody":
     "Lansăm facturarea treptat. Păstrezi tot ce ai în planul curent — revino în curând.",
-  "billing.upgradeTitle": "Treci la un plan superior",
-  "billing.onPlanPrefix": "Ești pe planul",
-  "billing.onPlanSuffix":
-    "— deblochează mai multe proiecte, mai multe evenimente pe lună și retenție mai lungă.",
-  "billing.monthly": "Lunar",
-  "billing.annual": "Anual",
-  "billing.annualSave": "(economisești ~20%)",
-  "billing.perYear": "an",
-  "billing.perMonth": "lună",
   "billing.featProjects": "{n} proiecte",
   "billing.featEvents": "{n} evenimente / lună",
   "billing.featDataRetention": "Retenție date {n}",
@@ -401,21 +394,6 @@ const ro: PartialCatalog = {
   "billing.featRetention": "Retenție audit {n}",
   "billing.featUsers": "{n} utilizatori",
   "billing.currentPlan": "Planul curent",
-  "billing.processing": "Se procesează…",
-  "billing.upgradeTo": "Treci la {plan}",
-  "billing.processedBy": "Plățile sunt procesate de RevenueCat (Stripe).",
-  "billing.entitlementsPrefix": "Drepturile",
-  "billing.entitlementsSuffix": "se asociază automat planului tău.",
-  "billing.notConfigured":
-    "Facturarea nu este configurată încă (lipsește VITE_REVENUECAT_PUBLIC_KEY). Adaugă cheia publică RevenueCat Web Billing în .env și reconstruiește imaginea web.",
-  "billing.signInAgain": "Te rugăm să te autentifici din nou pentru upgrade.",
-  "billing.openingCheckout": "Se deschide plata securizată…",
-  "billing.activating": "Plată finalizată — se activează planul tău…",
-  "billing.nowOnPlan": "Acum ești pe planul {plan}! 🎉",
-  "billing.willUpdate": "Plată primită — planul tău se va actualiza imediat.",
-  "billing.cancelled": "Plată anulată.",
-  "billing.checkoutFailed": "Plata a eșuat: {msg}",
-  "billing.unknownError": "eroare necunoscută",
   "pnav.issues": "Probleme",
   "pnav.liveEvents": "S-a primit un eveniment de eroare în ultimele 5 minute",
   "pnav.openIssues": "{n} deschise",

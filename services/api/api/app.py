@@ -5,7 +5,7 @@
     gunicorn -b 0.0.0.0:5000 -w 2 'api.app:create_app()'
 
 Responsibilities here: CORS, request size cap, rate limiting, blueprint
-registration (billing is conditional on ``BILLING_ENABLED``), health checks,
+registration, health checks,
 and a small set of error handlers that always emit the ``{"error": {...}}``
 envelope.
 """
@@ -67,11 +67,9 @@ def create_app() -> Flask:
     app.register_blueprint(apikeys_bp, url_prefix="/api/apikeys")
     app.register_blueprint(features_bp, url_prefix="/api/features")
 
-    # Billing is omitted entirely for self-host builds (BILLING_ENABLED=false).
-    if config.billing_enabled:
-        from .blueprints.billing import bp as billing_bp
-
-        app.register_blueprint(billing_bp, url_prefix="/api/billing")
+    # No billing blueprint: the RevenueCat integration was removed (Nov 2026).
+    # Paid plans arrive with the payments.3m4.net portal once oops joins the
+    # accounts.3m4.net SSO; until then Account.plan is only ever "free".
 
     # ---- Health checks ------------------------------------------------------
     # Bare /healthz for the container/load-balancer; /api/healthz behind Caddy.

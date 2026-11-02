@@ -3,7 +3,9 @@
 JSON REST API for oops, the error-tracking service. Auth, projects (one per
 app, site or service) with their public keys, the public ingest API (browser
 SDK / curl / backends), issues and events, the stats endpoints, account usage,
-API keys, and (optionally) RevenueCat billing. Mounted at `/api` behind Caddy.
+and API keys. No billing endpoints yet (paid plans arrive with the
+payments.3m4.net portal once oops joins the 3m4 account system). Mounted at
+`/api` behind Caddy.
 The spec is the repo-root `CONTRACT.md`.
 
 ## Layout
@@ -54,7 +56,6 @@ grouping, stats queries, hashing, usage, audit, PostHog) lives in the repo-root
 - `account/usage`, `account/audit`
 - `apikeys`: list/create/delete, `roles`, `me`
 - `features`
-- `billing` (only if `BILLING_ENABLED=true`): `offerings`, `webhook`
 - `healthz` (also at the bare path for container health checks)
 
 ## Run
