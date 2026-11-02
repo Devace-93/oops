@@ -29,10 +29,9 @@ if [ ! -f .env ]; then
   set_var DATABASE_URL "postgresql+psycopg://oops:$PG_PASS@postgres:5432/oops"
   set_var JWT_SECRET_KEY "$(secret 48)"
   set_var IP_HASH_SECRET "$(secret 32)"
-  set_var REVENUECAT_WEBHOOK_AUTH_TOKEN "$(secret 32)"
   set_var APP_BASE_URL https://oops.3m4.net
   set_var DASHBOARD_URL https://oops.3m4.net
-  # Billing stays off until oops has its own RevenueCat products; early access hides it anyway.
+  # Billing stays off until oops joins the 3m4 account system and the payments portal; early access hides it anyway.
   set_var BILLING_ENABLED false
   set_var VITE_BILLING_ENABLED false
   set_var VITE_API_URL /api

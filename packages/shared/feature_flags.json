@@ -29,7 +29,7 @@
       "created": "2026-10-16"
     },
     "billing": {
-      "description": "Paywall, checkout and /billing/offerings. The RevenueCat webhook is NEVER gated.",
+      "description": "The dashboard billing page (current plan + coming-soon notice). There is no purchase flow yet: paid plans arrive with the payments.3m4.net portal once oops joins the 3m4 account system.",
       "default": true,
       "created": "2026-10-16"
     }

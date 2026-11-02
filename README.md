@@ -42,7 +42,7 @@ an agent triage it through the MCP server. MIT.
 ```
 Caddy (reverse proxy)
  ├─ web   Qwik City (Bun)  landing + /info + /blog + dashboard + /o.js
- ├─ api   Flask            auth, projects, ingest + grouping, issues, stats, keys, audit, billing webhooks
+ ├─ api   Flask            auth, projects, ingest + grouping, issues, stats, keys, audit
  └─ mcp   Node (MCP)       AI-agent access: tools over the API, RBAC, confirmations, audit
       Postgres (events, issues and everything else) · Redis (rate limits)
 ```
@@ -73,7 +73,7 @@ make up                     # build + start everything; creates the schema
 ### Self-host (no billing)
 
 ```bash
-make up-selfhost            # BILLING_ENABLED=false; paywalls hidden, limits unlimited
+make up-selfhost            # BILLING_ENABLED=false; billing page hidden, limits unlimited
 ```
 
 ## Reporting errors from your app

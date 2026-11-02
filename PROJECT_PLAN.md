@@ -44,7 +44,8 @@ you resolve or ignore them from the dashboard, the API or an MCP client.
   source maps upload + frame de-minification, issue assignment and comments,
   merge issues, per-issue sampling, release health (crash-free users), a
   Python / Node helper package, public issue share links, CSV export.
-- **Phase 3:** billing on (RevenueCat), team members and invitations,
+- **Phase 3:** accounts.3m4.net SSO, then billing on through the
+  payments.3m4.net portal (RevenueCat was dropped), team members and invitations,
   dogfooding (oops on every 3m4 app, including oops itself, via the SDK and
   the Flask error handler).
 

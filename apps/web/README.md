@@ -61,7 +61,7 @@ chart library: the page must stay light and SSR-safe.
 ## Environment (build-time, `VITE_*`)
 
 See the repo `.env.example`: `VITE_API_URL`, `VITE_APP_URL`, `VITE_POSTHOG_KEY`,
-`VITE_POSTHOG_HOST`, `VITE_REVENUECAT_PUBLIC_KEY`, `VITE_BILLING_ENABLED`,
+`VITE_POSTHOG_HOST`, `VITE_BILLING_ENABLED`,
 `VITE_INFO_URL`, plus `VITE_METRICS_PROJECT_KEY` / `VITE_METRICS_TRACKER_URL`
 (oops itself is tracked by metrics.3m4.net). At runtime the SSR server reads
 `API_INTERNAL_URL` to resolve features before the first paint.

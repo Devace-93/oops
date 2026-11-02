@@ -261,7 +261,6 @@ Each breakdown holds the top 10 values by events.
 | DELETE | `/apikeys/<id>` | Revoke → 204. JWT only. |
 | GET | `/apikeys/me` | The calling key: `{ id, name, role, prefix, scopes, account }`. |
 | GET | `/features` | `{ features: { key: bool } }` for the caller (anonymous allowed). |
-| GET | `/billing/offerings`, POST `/billing/webhook` | Unchanged from the sibling apps (RevenueCat). Hidden while `early-access` is ON. |
 | GET | `/healthz` | `{ "status": "ok" }` |
 
 ## Objects

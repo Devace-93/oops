@@ -83,22 +83,13 @@ const ptPT: PartialCatalog = {
   "audit.loadFailed": "Falha ao carregar o registo de auditoria.",
 
   "billing.title": "Faturação",
+  "billing.currentPlanIs": "Está no plano {plan}.",
+  "billing.comingSoon": "Os planos pagos chegarão quando o oops aderir ao sistema de contas da 3m4.",
   "billing.selfHostTitle": "Esta é uma instância auto-alojada.",
   "billing.selfHostDisabled": "A faturação está desativada",
   "billing.earlyTitle": "Está em acesso antecipado: tudo incluído, grátis.",
   "billing.earlyBody": "Ainda não há nada para comprar. Planos e limites serão introduzidos depois, e será avisado antes de qualquer mudança.",
   "billing.unavailableBody": "Estamos a disponibilizar a faturação aos poucos. Mantém tudo do seu plano atual. Volte em breve.",
-  "billing.onPlanPrefix": "Está no plano",
-  "billing.onPlanSuffix": ". Desbloqueie mais projetos, mais eventos por mês e retenção mais longa.",
-  "billing.annualSave": "(poupe ~20%)",
   "billing.featUsers": "{n} utilizadores",
-  "billing.processing": "A processar…",
-  "billing.notConfigured":
-    "A faturação ainda não está configurada (falta VITE_REVENUECAT_PUBLIC_KEY). Adicione a sua chave pública do RevenueCat Web Billing ao .env e reconstrua a imagem web.",
-  "billing.signInAgain": "Inicie sessão novamente para fazer upgrade.",
-  "billing.openingCheckout": "A abrir o checkout seguro…",
-  "billing.activating": "Pagamento concluído. A ativar o seu plano…",
-  "billing.nowOnPlan": "Está agora no plano {plan}! 🎉",
-  "billing.willUpdate": "Pagamento recebido. O seu plano será atualizado em instantes.",
 };
 export default ptPT;

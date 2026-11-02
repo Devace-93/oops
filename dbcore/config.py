@@ -27,10 +27,9 @@ class Config:
     app_base_url: str = os.getenv("APP_BASE_URL", "http://localhost:8084")
     dashboard_url: str = os.getenv("DASHBOARD_URL", "http://localhost:8084")
 
-    # billing
+    # billing (no provider wired yet: self-host sets BILLING_ENABLED=false so the
+    # dashboard hides the plan page; hosted keeps it on for the coming-soon notice)
     billing_enabled: bool = _bool("BILLING_ENABLED", True)
-    revenuecat_webhook_token: str = os.getenv("REVENUECAT_WEBHOOK_AUTH_TOKEN", "")
-    revenuecat_api_key: str = os.getenv("REVENUECAT_SECRET_API_KEY", "")
 
     # posthog
     posthog_api_key: str = os.getenv("POSTHOG_API_KEY", "")
