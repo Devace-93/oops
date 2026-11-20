@@ -45,6 +45,12 @@ services:
       redis: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
     expose: ["5000"]
+    # `oops-api` is this stack's own name for the API. The bare service name `api`
+    # is also registered on the shared `edge` network by every sibling app, so
+    # resolving it there can return another app's API.
+    networks:
+      default:
+        aliases: [oops-api]
     restart: unless-stopped
 
   web:
@@ -70,7 +76,7 @@ services:
     env_file: ../.env
     environment:
       # SSR resolves oops' feature switches straight from the API over the internal network.
-      API_INTERNAL_URL: http://api:5000/api
+      API_INTERNAL_URL: http://oops-api:5000/api
     expose: ["3000"]
     restart: unless-stopped
 
@@ -79,7 +85,7 @@ services:
   mcp:
     build: { context: .., dockerfile: packages/mcp-server/Dockerfile }
     environment:
-      OOPS_API_URL: http://api:5000/api
+      OOPS_API_URL: http://oops-api:5000/api
       OOPS_MCP_PORT: "3333"
       OOPS_AUDIT_LOG: stderr
     depends_on:
